@@ -1,25 +1,12 @@
-use async_trait::async_trait;
 use rbatis::crud::CRUD;
-use crate::dao::site_setting_dao::SiteSettingDao;
-use crate::models::site_setting::{SiteSet, SiteSetting};
-use crate::rbatis::init_rbatis;
+use crate::models::site_setting::{SiteSetting};
+use crate::rbatis::RBATIS;
 
-pub struct SiteSettingDaoImpl();
-
-#[async_trait]
-impl SiteSettingDao for SiteSettingDaoImpl {
-    async fn get_list(self) -> Vec<SiteSetting> {
-        let SiteSettings= init_rbatis().await.fetch_list().await;
-        let v =match SiteSettings {
+    pub async fn get_list() -> Vec<SiteSetting> {
+        let site_settings = RBATIS.fetch_list().await;
+        let v =match site_settings {
             Ok(v)=>v,
             Err(..)=>vec!(),
         };
         v
     }
-}
-
-impl SiteSettingDaoImpl{
-    pub fn new()->SiteSettingDaoImpl{
-        SiteSettingDaoImpl{}
-    }
-}

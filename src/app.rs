@@ -15,10 +15,10 @@ pub async fn run(conf : &Config) ->std::io::Result<()>{
     .max_age(3600); // 设置 preflight 缓存的最大时间
     App::new()
     .wrap(cors)//允许跨域请求
-    //.app_data(rbatis::init_rbatis()) //初始化Rbatis
     .service(index_controller::site)
     .service(blog_controller::blogs)
-        //.service(web::scope("/admin"))后台程序
+        //.service(web::scope("/admin"))//
+    .service(blog_controller::category)    
     .default_service(web::to(index_controller::default))
     })
     .bind(format!("{}:{}",conf.server.address,conf.server.port))?

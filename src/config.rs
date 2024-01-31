@@ -28,12 +28,13 @@ pub struct MysqlCon {
 pub struct Server {
     pub port :u16, //端口
     pub address:String, //IP地址
+    pub front_adderss:String //前端页面地址
 }
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub fn default() -> &'static Config {
     CONFIG.get_or_init(|| {
-        let yaml_str = fs::read_to_string("config.yaml").expect("Failed to read config.yaml");
+        let yaml_str = fs::read_to_string("./conf/config.yaml").expect("Failed to read config.yaml");
         let config: Config = serde_yaml::from_str(&yaml_str).expect("Failed to parse config.yaml");
         config
     })

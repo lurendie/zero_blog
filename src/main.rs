@@ -1,28 +1,28 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse};
 
 //配置项
-mod config;
+pub mod config;
 //Rbatis
-mod rbatis;
-
-mod models;
-
-async fn greet() -> impl Responder {
-    HttpResponse::Ok().body("Hello, Actix-web!")
-}
-
+pub mod rbatis;
+pub mod models;
+mod log4rs;
+pub mod app;
+pub mod controller;
+pub mod service;
+mod dao;
+mod constant;
+mod r#enum;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    //初始化配置
     let conf =config::default();
-
-    HttpServer::new(|| {
-        App::new()
-            .app_data(rbatis::init_rbatis()) //初始化Rbatis
-            .route("/", web::get().to(greet)) // 当访问根路径时调用greet函数
-    })
-        //.bind("127.0.0.1:8080")?
-        .bind(format!("{}:{}",conf.server.address,conf.server.port))?
-        .run()
-        .await
+    //初始化Rabits
+    rbatis::init_rbatis(conf).await.expect("数据库初始化失败");
+    //初始化日志
+    log4rs::Log4rs::new();
+    //Service run
+    app::run(conf).await
 }
+
+
+

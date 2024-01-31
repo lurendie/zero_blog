@@ -1,16 +1,13 @@
-use crate::dao::site_setting_dao::SiteSettingDao;
 use std::collections::HashMap;
-use async_trait::async_trait;
 use serde_json::{json, Value};
 use crate::constant::site_setting_constants;
-use crate::service::site_setting_service::SiteSettingService;
-use crate::dao::dao_impl::site_setting_dao_impl::SiteSettingDaoImpl;
+use crate::dao;
 use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite::Favorite};
-    async fn get_site_info() ->HashMap<String, Value> {
-        let site_setting_list = SiteSettingDaoImpl::new().get_list().await; // 假设这是一个 Vec 或其他可迭代集合
+    pub async fn get_site_info() ->HashMap<String, Value> {
+        let site_setting_list = dao::site_setting_dao::get_list().await; // 假设这是一个 Vec 或其他可迭代集合
         let mut map:HashMap<String, Value> = HashMap::new();
         let mut introduction = introduction::Introduction::new();
-        let mut siteInfo:HashMap<String, Value> = HashMap::new();
+        let mut site_info:HashMap<String, Value> = HashMap::new();
         let mut badges = vec![];
        // let mut rollTexts = vec![];
         let mut favorites:Vec<Favorite> = vec![];
@@ -20,9 +17,9 @@ use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite:
                 1 => {
                     if  site_setting_constants::COPYRIGHT == v.name_en{
                        let copyright:Copyright=serde_json::from_str(v.value.as_str()).unwrap();
-                        siteInfo.insert(v.name_en, json!(copyright));
+                        site_info.insert(v.name_en, json!(copyright));
                     }else{
-                        siteInfo.insert(v.name_en, Value::String(v.value));
+                        site_info.insert(v.name_en, Value::String(v.value));
                     }
                 },
                 //类型2
@@ -58,8 +55,7 @@ use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite:
         }
         introduction.favorites=favorites;
         map.insert("introduction".to_string(),json!(introduction));
-        map.insert( "siteInfo".to_string(),json!(siteInfo));
+        map.insert( "siteInfo".to_string(),json!(site_info));
         map.insert("badges".to_string(),json!(badges));
         map
     }
-}
