@@ -18,6 +18,6 @@ pub(crate) async fn init_rbatis(conf: &Config) -> Result<(), rbatis::Error> {
         conf.mysql.data_base
     );
     RBATIS.link(&db_url).await.expect("TODO: panic message");
-    log::debug!("数据库连接初始化完成！");
+    log::info!("数据库连接初始化完成！");
     Ok(())
 }
