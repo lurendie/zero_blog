@@ -1,8 +1,7 @@
-use rbatis::crud_table;
 use serde::{Deserialize, Serialize};
-
-#[crud_table(table_name: "site_setting" | table_columns:"id,name_en,name_zh,value,type")]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+use rbatis::crud;
+use rbs;
+#[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct SiteSetting{
     //#[crud_table(column: "id")]
     pub id:Option<u16>,
@@ -14,3 +13,4 @@ pub struct SiteSetting{
     pub value :String,
     pub r#type :u16 //1基础设置，2页脚徽标，3资料卡，4友链信息
 }
+crud!(SiteSetting {});

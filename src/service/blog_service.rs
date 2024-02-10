@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::string::ToString;
-use rbatis::{Page};
-use serde_json::{json, Value};
+use rbatis::{IPage, IPageRequest, Page};
+use rbs::to_value;
+use rbs::Value;
 use crate::dao::blog_dao::{get_blog_list,get_by_name as getByname,get_blog_list_by_is_published as get_blog_public};
 use crate::models::vo::blog_info::BlogInfo;
 use rand::Rng;
@@ -38,8 +39,8 @@ const   _PRIVATE_BLOG_DESCRIPTION :&str="此文章受密码保护！";
                 }
             }
         }
-        map.insert("list".to_string(),json!(page_list.records));
-        map.insert("totalPage".to_string(),json!(page_list.pages));
+        map.insert("list".to_string(),to_value!(page_list.get_records()));
+        map.insert("totalPage".to_string(),to_value!(page_list.pages()));
         map
     }
 //随机文章
@@ -100,7 +101,7 @@ pub async fn get_by_name(name :String,page_num:usize) ->HashMap<String, Value>{
                 panic!("{}",e)
             }
         };
-    map.insert("list".to_string(),json!(page_list.records));
-    map.insert("totalPage".to_string(),json!(page_list.pages));
+    map.insert("list".to_string(),to_value!(page_list.get_records()));
+    map.insert("totalPage".to_string(),to_value!(page_list.pages()));
     map
 }

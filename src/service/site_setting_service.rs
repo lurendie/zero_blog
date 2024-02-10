@@ -1,5 +1,7 @@
 use std::collections::HashMap;
-use serde_json::{json, Value};
+use rbs::Value;
+use rbs::to_value;
+use serde_json::json;
 use crate::constant::site_setting_constants;
 use crate::dao;
 use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite::Favorite};
@@ -17,7 +19,7 @@ use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite:
                 1 => {
                     if  site_setting_constants::COPYRIGHT == v.name_en{
                        let copyright:Copyright=serde_json::from_str(v.value.as_str()).unwrap();
-                        site_info.insert(v.name_en, json!(copyright));
+                        site_info.insert(v.name_en, to_value!(copyright));
                     }else{
                         site_info.insert(v.name_en, Value::String(v.value));
                     }
@@ -54,8 +56,8 @@ use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite:
             }
         }
         introduction.favorites=favorites;
-        map.insert("introduction".to_string(),json!(introduction));
-        map.insert( "siteInfo".to_string(),json!(site_info));
-        map.insert("badges".to_string(),json!(badges));
+        map.insert("introduction".to_string(),to_value!(introduction));
+        map.insert( "siteInfo".to_string(),to_value!(site_info));
+        map.insert("badges".to_string(),to_value!(badges));
         map
     }
