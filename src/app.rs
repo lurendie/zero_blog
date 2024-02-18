@@ -18,7 +18,9 @@ pub async fn run(conf : &Config) ->std::io::Result<()>{
     .service(index_controller::site)
     .service(blog_controller::blogs)
         //.service(web::scope("/admin"))//
-    .service(blog_controller::category)    
+    .service(blog_controller::category)
+    .service(blog_controller::blog)
+    .service(blog_controller::tag)    
     .default_service(web::to(index_controller::default))
     })
     .bind(format!("{}:{}",conf.server.address,conf.server.port))?

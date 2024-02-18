@@ -1,4 +1,4 @@
-use chrono::{Local};
+use chrono::Local;
 pub struct Log4rs;
 
 impl Log4rs{

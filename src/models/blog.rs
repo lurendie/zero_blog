@@ -1,8 +1,8 @@
-use rbatis::{crud_table};
 use serde::{Deserialize, Serialize};
-
+use rbatis::{crud, impl_select_page};
+use rbs;
+use rbatis::rbdc::datetime::DateTime;
 //Blog
-#[crud_table(table_name: "blog")]
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct Blog{
     id :Option<u16>,
@@ -14,8 +14,8 @@ pub struct Blog{
     is_recommend:u8,
     is_appreciation:u8,
     is_comment_enabled:u8,
-    create_time:chrono::NaiveDateTime,
-    update_time:chrono::NaiveDateTime,
+    create_time:DateTime,
+    update_time:DateTime,
     views:u16,
     words:u16,
     read_time:u16,
@@ -24,3 +24,10 @@ pub struct Blog{
     password:String,
     user_id:u16
 }
+crud!(Blog {});
+impl_select_page!(Blog{select_page() => "`where is_published = 1`"});
+impl_select_page!(Blog{select_page_by_name(name:&str) =>"
+     if name != null && name != '':
+       `where name != #{name}`
+     if name == '':
+       `where name != ''`"});

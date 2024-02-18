@@ -3,8 +3,8 @@ use actix_web::{get, HttpResponse, Responder};
 use actix_web::http::header;
 use log::info;
 use crate::service::{site_setting_service,category_service,blog_service,tag_service};
-use serde_json;
-use serde_json::{json, Value};
+use rbs::to_value;
+use rbs::Value;
 use crate::models::vo::result::Result;
 
 //返回数据
@@ -15,10 +15,10 @@ pub async fn site() -> impl Responder {
         let random_list =blog_service::get_blog_list_random().await;
         let new_list =blog_service::get_blog_list_new().await;
         let tag_list=tag_service::get_tags().await;
-        map.insert("newBlogList".to_string(),json!(new_list.unwrap()));
-        map.insert("categoryList".to_string(),json!(category_list));
-        map.insert("tagList".to_string(),json!(tag_list.unwrap())); 
-        map.insert("randomBlogList".to_string(),json!(random_list.unwrap_or_default()));
+        map.insert("newBlogList".to_string(),to_value!(new_list.unwrap()));
+        map.insert("categoryList".to_string(),to_value!(category_list));
+        map.insert("tagList".to_string(),to_value!(tag_list.unwrap())); 
+        map.insert("randomBlogList".to_string(),to_value!(random_list.unwrap_or_default()));
         let result :Result<HashMap<String, Value>>=Result::new(200,String::from("请求成功！"),Some(map));
         HttpResponse::Ok().insert_header(header::ContentType(mime::APPLICATION_JSON)).json(result)
     }

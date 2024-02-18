@@ -2,3 +2,5 @@
 .gitignore
 Cargo.lock
 /logs
+/.idea
+/.vscode
