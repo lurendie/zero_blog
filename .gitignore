@@ -1,6 +1,5 @@
 /target
-.gitignore
 Cargo.lock
 /logs
-/.idea
-/.vscode
+.idea
+.vscode

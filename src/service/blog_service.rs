@@ -3,7 +3,7 @@ use std::string::ToString;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
 use rbs::Value;
-use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_published as get_blog_public,get_by_tag};
+use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_published as get_blog_public,get_by_tag,get_by_id as getById};
 use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail};
 use rand::Rng;
 
@@ -106,7 +106,7 @@ pub async fn get_by_name(name :String,page_num:usize) ->HashMap<String, Value>{
 }
 //根据ID查找博文
 pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
-    blog_dao::get_by_id(id).await
+    getById(id).await
 }
 
 //根据tag名称查询博文
