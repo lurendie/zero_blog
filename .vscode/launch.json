@@ -7,39 +7,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'nblog'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=nblog",
-                    "--package=nblog"
-                ],
-                "filter": {
-                    "name": "nblog",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'nblog'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=nblog",
-                    "--package=nblog"
-                ],
-                "filter": {
-                    "name": "nblog",
-                    "kind": "bin"
-                }
-            },
+            "name": "Launch",
+            "program": "${workspaceFolder}/target/debug/${workspaceFolderBasename}.exe",
             "args": [],
             "cwd": "${workspaceFolder}"
         }
+        
+
+        
+        
+
+        
+       
     ]
 }

@@ -3,8 +3,8 @@ use std::string::ToString;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
 use rbs::Value;
-use crate::dao::blog_dao::{get_blog_list,get_by_name as getByname,get_blog_list_by_is_published as get_blog_public};
-use crate::models::vo::blog_info::BlogInfo;
+use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_published as get_blog_public,get_by_tag};
+use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail};
 use rand::Rng;
 use crate::dao::blog_dao;
 
@@ -94,7 +94,27 @@ pub async fn get_blog_list_new()->Result<Vec<BlogInfo>,rbatis::Error>{
 pub async fn get_by_name(name :String,page_num:usize) ->HashMap<String, Value>{
     let mut map :HashMap<String, Value>=HashMap::new();
     let page_list:Page<BlogInfo>;
-    page_list=match getByname(name ,page_num,PAGE_SIZE).await{
+    page_list=match get_by_category(name ,page_num,PAGE_SIZE).await{
+            Ok(ok)=>ok,
+            Err(e)=> {
+                log::error!("BlogList查询失败");
+                panic!("{}",e)
+            }
+        };
+    map.insert("list".to_string(),to_value!(page_list.get_records()));
+    map.insert("totalPage".to_string(),to_value!(page_list.pages()));
+    map
+}
+//根据ID查找博文
+pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
+    blog_dao::get_by_id(id).await
+}
+
+//根据tag名称查询博文
+pub async fn get_by_tag_name(name :String,page_num:usize) ->HashMap<String, Value>{
+    let mut map :HashMap<String, Value>=HashMap::new();
+    let page_list:Page<BlogInfo>;
+    page_list=match get_by_tag(name ,page_num,PAGE_SIZE).await{
             Ok(ok)=>ok,
             Err(e)=> {
                 log::error!("BlogList查询失败");

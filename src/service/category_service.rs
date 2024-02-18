@@ -1,6 +1,5 @@
 use crate::models::category::Category;
-use crate::models::vo::blog_info::BlogInfo;
-use crate::dao::category_dao::{get_list as getList};
+use crate::dao::category_dao::get_list as getList;
 
 pub async fn get_list() ->Vec<Category>{
     getList().await

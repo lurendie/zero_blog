@@ -2,7 +2,6 @@ use crate::models::{tag::Tag,category::Category};
 use rbatis::{crud, impl_select_page};
 use rbs;
 use serde::{Serialize,Deserialize};
-use crate::models::blog::Blog;
 use rbatis::rbdc::datetime::DateTime;
 //博客简要信息
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -28,10 +27,6 @@ crud!(BlogInfo {},"blog");
 impl_select_page!(BlogInfo{select_page()=>"
       if !sql.contains('count(1)'):
       `order by create_time desc`"},"blog");
-impl_select_page!(BlogInfo{select_page_by_name(name:&str) =>"
-     if name != null && name != '':
-       `where name != #{name}`
-     if name == '':
-       `where name != ''`"},"blog");
-  
-//impl_select_page!(Blog{select_page_by_limit(name:&str,limit_sql:&str) => "`where is_published = 1`"});
+impl_select_page!(BlogInfo{select_page_by_categoryid(id:&str) =>"
+     if id != null && id != '':
+       `where category_id = #{id}`"},"blog");
