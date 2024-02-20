@@ -30,4 +30,4 @@ impl_select_page!(Blog{select_page_by_name(name:&str) =>"
      if name != null && name != '':
        `where name != #{name}`
      if name == '':
-       `where name != ''`"});
+       `where name != ''`"});             

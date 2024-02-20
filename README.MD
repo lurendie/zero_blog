@@ -11,6 +11,8 @@ NBlog的Rust 学习开发API版本，本项目是前后端分离开发，前端�
    - 分类 [ 完成 ]
    - 标签 [ 完成 ]
    - 友链
+   - 归档
+   - 动态
   
 # 致谢
- 感谢[Nblog](https://github.com/lurendie/NBlog)大佬的前端页面，个人觉得非常好看
+ 感谢[Nblog](https://github.com/lurendie/NBlog)大佬的前端页面

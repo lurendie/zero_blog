@@ -1,8 +1,12 @@
-use rbatis::{Page, PageRequest};
+use std::future::IntoFuture;
+
+use rbatis::rbdc::DateTime;
+use rbatis::{Error, Page, PageRequest};
 use rbs::to_value;
 use crate::models::{category::Category,tag::Tag};
 use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail};
 use crate::rbatis::RBATIS;
+use serde::{Serialize,Deserialize};
 
     pub async fn get_blog_list_by_is_published(page_num:u64,page_size:u64) -> Result<Page<BlogInfo>,rbatis::Error>{
         let mut page =BlogInfo::select_page(&RBATIS.acquire().await.expect("异常"), &PageRequest::new(page_num, page_size)).await.unwrap();
@@ -147,9 +151,6 @@ pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
 
 //根据标签名称查询该分类博文
 pub async fn get_by_tag(name :String,page_num:usize,page_size:u64) ->Result<Page<BlogInfo>,rbatis::Error>{
-    //标签查询
-    //todo BUG 现在分类查询无效！！！
-    //todo!("BUG 现在标签名称无效");
     let sql = format!("
     select
     id,tag_name as name,color
@@ -216,6 +217,31 @@ pub async fn get_by_tag(name :String,page_num:usize,page_size:u64) ->Result<Page
     Ok(page)
 }
 
+//博文日期时间映射结构体
+#[derive(Debug, Clone,Serialize,Deserialize)]
+struct BlogDateTime{
+    create_time:DateTime
+}
+
+//查询所有的文章的日期时间
+async fn get_all_datetime()->Result<Vec<BlogDateTime>,Error>{
+    let sql ="select 
+    blog.create_time
+    from blog GROUP BY create_time ORDER BY create_time DESC";
+    let datetime_query=RBATIS.query_decode::<Vec<BlogDateTime>>(sql, vec![]).await.unwrap_or_else(|e|{
+        log::error!("{}", e);
+        vec![]
+    });
+    Ok(datetime_query)
+}
+
+//根据时间查询博文
+pub(crate) async fn get_archives(date_time:String)->Result<Vec<BlogDateTime>,Error>{
+    todo!("未完成代码！！！");
+    Ok(vec![])
+
+}
+
 #[cfg(test)]
 mod test{
     use rbatis::executor::Executor;
@@ -231,6 +257,11 @@ mod test{
         let arr = vec![1,2,3,4,5,1,2,3,4,5];
         let page =Page{records:arr,total:5 as u64,page_no:1,page_size:5,do_count:true};
         println!("{:?}",page)
+    }
+
+    #[test]
+    fn test_format(){
+    
     }
 }
 
