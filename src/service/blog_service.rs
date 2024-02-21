@@ -6,6 +6,7 @@ use rbs::Value;
 use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_published as get_blog_public,get_by_tag,get_by_id as getById};
 use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail};
 use rand::Rng;
+use crate::dao::blog_dao;
 
 //随机博客显示5条
 const RANDOM_BLOG_LIMIT_NUM:u64= 5;
@@ -122,5 +123,31 @@ pub async fn get_by_tag_name(name :String,page_num:usize) ->HashMap<String, Valu
         };
     map.insert("list".to_string(),to_value!(page_list.get_records()));
     map.insert("totalPage".to_string(),to_value!(page_list.pages()));
+    map
+}
+
+//获取归档文章
+pub(crate) async fn get_archives()->HashMap<String, Value>{
+    //获取所有文章的日期
+    let mut map :HashMap<String, Value>=HashMap::new();
+    let blog_datetimes=blog_dao::get_all_datetime().await.unwrap_or_else(|e|{
+        log::error!("{:?}",e);
+        vec![]
+    });
+    let mut date_times = vec![];
+    blog_datetimes.iter
+    .map(|itme|{
+        date_times.push(itme.create_time.format("YYYY年MM月"))
+    });
+    //通过日期获取文章
+    todo!("！！！！未完成");
+    for item in date_times{
+        item.split("年").collect();
+        let blogs =blog_dao::get_by_date(item).await.unwrap_or_else(|e|{
+            log::error!("{:?}",e);
+            vec![]
+        });
+    }
+    
     map
 }
