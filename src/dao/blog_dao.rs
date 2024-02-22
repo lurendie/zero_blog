@@ -237,11 +237,14 @@ pub(crate)async fn get_all_datetime()->Result<Vec<BlogDateTime>,Error>{
 
 //根据时间查询博文
 pub(crate) async fn get_by_date(date_time:String)->Result<Vec<BlogInfo>,Error>{
+    println!("{}",&date_time);
+    let year = &date_time.as_str()[0..4];
+    let month = &date_time.as_str()[6..];
     let sql ="SELECT *
-    FROM blog
-    WHERE YEAR(create_time) = ?
-      AND MONTH(create_time) =?;";
-    let datetime_query=RBATIS.query_decode::<Vec<BlogInfo>>(sql, vec![]).await.unwrap_or_else(|e|{
+        FROM blog
+        WHERE YEAR(create_time) = ?
+          AND MONTH(create_time) = ?;";
+    let datetime_query=RBATIS.query_decode::<Vec<BlogInfo>>(sql, vec![to_value!(year),to_value!(month)]).await.unwrap_or_else(|e|{
         log::error!("{}", e);
         vec![]
     });
@@ -268,7 +271,11 @@ mod test{
 
     #[test]
     fn test_format(){
-    
+        let date_time ="2021年12月";
+        let year = &date_time[0..4];
+        println!("{}",year);
+        let month = &date_time[7..9];
+        println!("{}",month);
     }
 }
 
