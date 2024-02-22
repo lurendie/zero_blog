@@ -5,12 +5,13 @@ use actix_web::http::header;
 use actix_web::web::Query;
 use rbs::{to_value, Value};
 use crate::models::vo::result::Result;
+use crate::service::blog_service;
 
 #[get("/archives")]
 pub(crate) async fn archives()->impl Responder {
     //todo!("未完成！！！");
     let mut data:HashMap<String, Value> = HashMap::new();
-    let blog_map:HashMap<String, Value>=HashMap::new();
+    let blog_map:HashMap<String, Value>=blog_service::get_archives().await;
     data.insert("blogMap".to_string(), to_value!(blog_map));
     data.insert("count".to_string(), to_value!(0));
     let result =Result::ok("请求成功".to_string(), Some(data));

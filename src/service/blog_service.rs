@@ -3,8 +3,9 @@ use std::string::ToString;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
 use rbs::Value;
+use crate::dao::blog_dao::BlogDateTime;
 use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_published as get_blog_public,get_by_tag,get_by_id as getById};
-use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail};
+use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail,blog_archive::BlogArchive};
 use rand::Rng;
 use crate::dao::blog_dao;
 
@@ -135,19 +136,29 @@ pub(crate) async fn get_archives()->HashMap<String, Value>{
         vec![]
     });
     let mut date_times = vec![];
-    blog_datetimes.iter
+    blog_datetimes.iter()
     .map(|itme|{
-        date_times.push(itme.create_time.format("YYYY年MM月"))
-    });
+        date_times.push(itme.create_time.format("YYYY-MM"))
+    }).collect::<Vec<_>>();
     //通过日期获取文章
-    todo!("！！！！未完成");
+    //todo!("！！！！未完成");
     for item in date_times{
-        item.split("年").collect();
-        let blogs =blog_dao::get_by_date(item).await.unwrap_or_else(|e|{
+        let mut itme_map:Vec<BlogArchive> =vec![];
+        
+        let blogs =blog_dao::get_by_date(item.clone()).await.unwrap_or_else(|e|{
             log::error!("{:?}",e);
             vec![]
         });
+        for blog in blogs{
+            let mut  blog_archive=BlogArchive::new();
+            blog_archive.id=blog.id.unwrap().to_string();
+            blog_archive.password=blog.password;
+            blog_archive.privacy=false;
+            blog_archive.day=blog.create_time.format("DD");
+            blog_archive.title=blog.title;
+            itme_map.push(blog_archive);
+        }
+        map.insert(item, to_value!(itme_map));
     }
-    
     map
 }
