@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::string::ToString;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
+use rbs::value::map::ValueMap;
 use rbs::Value;
-use crate::dao::blog_dao::BlogDateTime;
 use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_published as get_blog_public,get_by_tag,get_by_id as getById};
 use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail,blog_archive::BlogArchive};
 use rand::Rng;
@@ -128,15 +128,15 @@ pub async fn get_by_tag_name(name :String,page_num:usize) ->HashMap<String, Valu
 }
 
 //获取归档文章
-pub(crate) async fn get_archives()->HashMap<String, Value>{
+pub(crate) async fn get_archives()->ValueMap{
     //获取所有文章的日期
-    let mut map :HashMap<String, Value>=HashMap::new();
+    let mut map :ValueMap=ValueMap::new();
     let blog_datetimes=blog_dao::get_all_datetime().await.unwrap_or_else(|e|{
         log::error!("{:?}",e);
         vec![]
     });
     let mut date_times = vec![];
-    blog_datetimes.iter()
+    let _ =blog_datetimes.iter()
     .map(|itme|{
         date_times.push(itme.create_time.format("YYYY-MM"))
     }).collect::<Vec<_>>();
@@ -154,11 +154,15 @@ pub(crate) async fn get_archives()->HashMap<String, Value>{
             blog_archive.id=blog.id.unwrap().to_string();
             blog_archive.password=blog.password;
             blog_archive.privacy=false;
-            blog_archive.day=blog.create_time.format("DD");
+            blog_archive.day=blog.create_time.format("DD")+"日";
             blog_archive.title=blog.title;
             itme_map.push(blog_archive);
         }
-        map.insert(item, to_value!(itme_map));
+        map.insert(to_value!(item), to_value!(itme_map));
     }
     map
+}
+
+pub(crate) async fn get_archives_count()->Option<usize>{
+    Some(blog_dao::get_archives_count().await.unwrap() as usize)
 }
