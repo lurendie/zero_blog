@@ -2,7 +2,7 @@ use actix_web::http::header::{AUTHORIZATION, ACCEPT, ACCESS_CONTROL_ALLOW_ORIGIN
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use crate::config::Config;
-use crate::controller::{index_controller,blog_controller,archive_controller};
+use crate::controller::{index_controller,blog_controller,archive_controller,moment_controller};
 
 pub async fn run(conf : &Config) ->std::io::Result<()>{
     HttpServer::new(|| {
@@ -21,7 +21,8 @@ pub async fn run(conf : &Config) ->std::io::Result<()>{
     .service(blog_controller::category)
     .service(blog_controller::blog)
     .service(blog_controller::tag)
-    .service(archive_controller::archives)    
+    .service(archive_controller::archives)  
+    .service(moment_controller::moments)  
     .default_service(web::to(index_controller::default))
     })
     .bind(format!("{}:{}",conf.server.address,conf.server.port))?

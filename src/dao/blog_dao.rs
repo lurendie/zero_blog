@@ -1,5 +1,3 @@
-use std::future::IntoFuture;
-
 use rbatis::rbdc::DateTime;
 use rbatis::{Error, Page, PageRequest};
 use rbs::to_value;
@@ -86,8 +84,6 @@ use serde::{Serialize,Deserialize};
 //根据名称查询该分类博文
 pub async fn get_by_category(name :String,page_num:usize,page_size:u64) ->Result<Page<BlogInfo>,rbatis::Error>{
     //分类查询
-    //todo BUG 现在分类查询无效！！！
-    //todo!("BUG 现在分类查询无效");
     let sql = format!("
     select
      id,category_name as name
@@ -164,9 +160,6 @@ pub async fn get_by_tag(name :String,page_num:usize,page_size:u64) ->Result<Page
         println!("{:?}", e);
         Tag { id: Some(0), name: "未知".to_string(),color:"#000000".to_string() }
     });
-    //博文查询
-    //let page_request = PageRequest::new(page_num.try_into().unwrap(), page_size);
-    //let mut page =BlogInfo::select_page_by_tagid(&RBATIS.acquire().await.expect("异常"), &page_request,tag.id.unwrap().to_string().as_str()).await.unwrap();
     let sql = "select 
     blog.*
     from blog,blog_tag where blog.id=blog_tag.blog_id and blog_tag.tag_id= ? limit ?,?";
@@ -223,12 +216,12 @@ pub(crate) struct BlogDateTime{
     pub(crate) create_time:DateTime
 }
 
-//查询所有的文章的日期时间
+//查询所有的公开文章的日期时间
 pub(crate)async fn get_all_datetime()->Result<Vec<BlogDateTime>,Error>{
     let sql ="select 
     blog.create_time
-    from blog GROUP BY create_time ORDER BY create_time DESC";
-    let datetime_query=RBATIS.query_decode::<Vec<BlogDateTime>>(sql, vec![]).await.unwrap_or_else(|e|{
+    from blog where is_published = ? GROUP BY create_time ORDER BY create_time DESC";
+    let datetime_query=RBATIS.query_decode::<Vec<BlogDateTime>>(sql, vec![to_value!(1)]).await.unwrap_or_else(|e|{
         log::error!("{}", e);
         vec![]
     });
@@ -252,15 +245,22 @@ pub(crate) async fn get_by_date(date_time:String)->Result<Vec<BlogInfo>,Error>{
 
 }
 
+//查询公开文章的数量
+pub(crate) async fn get_archives_count()->Result<u64,Error>{
+    let sql ="SELECT count(id)
+    FROM blog
+    WHERE is_published = 1";
+      let count=RBATIS.query_decode::<u64>(sql, vec![]).await.unwrap_or_else(|e|{
+        log::error!("{}", e);
+        0
+    });
+    Ok(count)
+}
+
 #[cfg(test)]
 mod test{
-    use rbatis::executor::Executor;
-    use rbatis::{IPageRequest, Page, PageRequest};
-    use rbs::to_value;
-    use rbson::Bson;
-    use crate::models::{category::Category,tag::Tag};
-    use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail};
-    use crate::rbatis::RBATIS;
+    use rbatis::Page;
+    use rbatis::rbdc::DateTime;
     //使用Rbatis Page结构体测试自定义数据
     #[test]
     fn test_my_page(){
@@ -271,11 +271,12 @@ mod test{
 
     #[test]
     fn test_format(){
-        let date_time ="2021年12月";
-        let year = &date_time[0..4];
-        println!("{}",year);
-        let month = &date_time[7..9];
-        println!("{}",month);
+        let date = DateTime::now().format("YYYY-MM-DD");
+        println!("{}",date);
+        let mut date_time =String::from("2021-12");
+        date_time.insert(4, '年');
+        date_time.insert(10, '日');
+        println!("{}",date_time);
     }
 }
 
