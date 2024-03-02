@@ -273,11 +273,10 @@ mod test{
     fn test_format(){
         let date = DateTime::now().format("YYYY-MM-DD");
         println!("{}",date);
-        let date_time ="2021年12月";
-        let year = &date_time[0..7];
-        println!("{}",year);
-        let month = &date_time[7..9];
-        println!("{}",month);
+        let mut date_time =String::from("2021-12");
+        date_time.insert(4, '年');
+        date_time.insert(10, '日');
+        println!("{}",date_time);
     }
 }
 

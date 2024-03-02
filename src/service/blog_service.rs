@@ -142,7 +142,7 @@ pub(crate) async fn get_archives()->ValueMap{
     }).collect::<Vec<_>>();
     //通过日期获取文章
     //todo!("！！！！未完成");
-    for item in date_times{
+    for item in date_times.iter_mut(){
         let mut itme_map:Vec<BlogArchive> =vec![];
         
         let blogs =blog_dao::get_by_date(item.clone()).await.unwrap_or_else(|e|{
@@ -158,6 +158,9 @@ pub(crate) async fn get_archives()->ValueMap{
             blog_archive.title=blog.title;
             itme_map.push(blog_archive);
         }
+        //更改
+        item.insert(4, '年');
+        item.insert(10, '日');
         map.insert(to_value!(item), to_value!(itme_map));
     }
     map

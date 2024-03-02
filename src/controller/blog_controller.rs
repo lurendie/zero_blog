@@ -18,7 +18,7 @@ pub async  fn blogs(params: Query<HashMap<String, usize>>) ->impl Responder{
         page=1;
     }
     let  page=blog_service::get_blog_list_by_is_published(Some(page as u64)).await;
-    let result : crate::models::vo::result::Result<HashMap<String, Value>> = crate::models::vo::result::Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
+    let result : Result<HashMap<String, Value>> = Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok().insert_header(header::ContentType(mime::APPLICATION_JSON)).json(result)
 }
 
