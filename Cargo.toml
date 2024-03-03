@@ -26,3 +26,4 @@ markdown = "1.0.0-alpha.16"
 rand = "0.8" #随机数
 rbdc-mysql={version="4.5"}
 rbs={version="4.5"}
+pulldown-cmark = "0.8" ##Markdown转HTML

@@ -11,6 +11,7 @@ pub mod service;
 mod dao;
 mod constant;
 mod r#enum;
+mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
