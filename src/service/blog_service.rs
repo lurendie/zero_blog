@@ -8,6 +8,7 @@ use crate::dao::blog_dao::{get_blog_list,get_by_category,get_blog_list_by_is_pub
 use crate::models::vo::{blog_info::BlogInfo,blog_detail::BlogDetail,blog_archive::BlogArchive};
 use rand::Rng;
 use crate::dao::blog_dao;
+use crate::utils::markdown_parse::MarkdownParse;
 
 //随机博客显示5条
 const RANDOM_BLOG_LIMIT_NUM:u64= 5;
@@ -21,25 +22,28 @@ const   _PRIVATE_BLOG_DESCRIPTION :&str="此文章受密码保护！";
 
     pub(crate) async fn get_blog_list_by_is_published(page_num:Option<u64>) -> HashMap<String, Value> {
         let mut map :HashMap<String, Value>=HashMap::new();
-        let page_list:Page<BlogInfo>;
+        let mut page_list:Page<BlogInfo>;
         if page_num.is_none(){
             page_list =match get_blog_public(1,PAGE_SIZE).await {
                 Ok(ok)=>ok,
                 Err(e)=> {
-
-                    log::error!("BlogList查询失败");
-                    panic!("{}",e)
+                    log::error!("BlogList查询失败:{:?}",e);
+                    Page::new(0, 0)
                 }
             };
         }else{
             page_list=match get_blog_public(page_num.expect("异常！"),PAGE_SIZE).await{
                 Ok(ok)=>ok,
                 Err(e)=> {
-                    log::error!("BlogList查询失败");
-                    panic!("{}",e)
+                    log::error!("BlogList查询失败:{:?}",e);
+                    Page::new(0, 0)
                 }
             }
         }
+        //转换HTML
+        let _ = page_list.get_records_mut().iter_mut().map(|item|{
+            item.description =MarkdownParse::to_html(&item.description);
+        });
         map.insert("list".to_string(),to_value!(page_list.get_records()));
         map.insert("totalPage".to_string(),to_value!(page_list.pages()));
         map
@@ -62,7 +66,7 @@ pub async fn get_blog_list_random()->Result<Vec<BlogInfo>,rbatis::Error>{
             }).collect())
         },
         Err(e)=>{
-            log::error!("{}",e.to_string());
+            log::error!("{}",e);
            Err(e)
         }
     }
@@ -94,34 +98,45 @@ pub async fn get_blog_list_new()->Result<Vec<BlogInfo>,rbatis::Error>{
 //根据分类名称查询博文
 pub async fn get_by_name(name :String,page_num:usize) ->HashMap<String, Value>{
     let mut map :HashMap<String, Value>=HashMap::new();
-    let page_list:Page<BlogInfo>;
+    let mut page_list:Page<BlogInfo>;
     page_list=match get_by_category(name ,page_num,PAGE_SIZE).await{
             Ok(ok)=>ok,
             Err(e)=> {
-                log::error!("BlogList查询失败");
-                panic!("{}",e)
+                log::error!("BlogList查询失败:{}",e);
+                Page::new(0, 0)
             }
         };
+    let _ = page_list.get_records_mut().iter_mut().map(|item|{
+        item.description =MarkdownParse::to_html(&item.description);
+    });    
     map.insert("list".to_string(),to_value!(page_list.get_records()));
     map.insert("totalPage".to_string(),to_value!(page_list.pages()));
     map
 }
 //根据ID查找博文
 pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
-    getById(id).await
+    let mut blog=getById(id).await
+    .unwrap_or_else(||{
+        BlogDetail::new()
+    });
+    blog.content=MarkdownParse::to_html(&blog.content);
+    Some(blog)
 }
 
 //根据tag名称查询博文
 pub async fn get_by_tag_name(name :String,page_num:usize) ->HashMap<String, Value>{
     let mut map :HashMap<String, Value>=HashMap::new();
-    let page_list:Page<BlogInfo>;
+    let mut page_list:Page<BlogInfo>;
     page_list=match get_by_tag(name ,page_num,PAGE_SIZE).await{
             Ok(ok)=>ok,
             Err(e)=> {
-                log::error!("BlogList查询失败");
-                panic!("{}",e)
+                log::error!("BlogList查询失败:{}",e);
+                Page::new(0, 0)
             }
         };
+        let _ = page_list.get_records_mut().iter_mut().map(|item|{
+            item.description =MarkdownParse::to_html(&item.description);
+        });    
     map.insert("list".to_string(),to_value!(page_list.get_records()));
     map.insert("totalPage".to_string(),to_value!(page_list.pages()));
     map

@@ -1,14 +1,11 @@
-use actix_web::web::BufMut;
 use pulldown_cmark::{html,Parser};
-use tokio::io::AsyncWriteExt;
-use std::io::{Cursor, Write};
-struct MarkdownParse;
+pub(crate) struct MarkdownParse;
 
 impl MarkdownParse{
     //Markdown
-    pub(crate) fn to_html(html_input :String)->String{
+    pub(crate) fn to_html(markdown_input :&String)->String{
         // 设置HTML解析器
-   let parser = Parser::new(&html_input.as_str());
+   let parser = Parser::new(markdown_input.as_str());
 
    // 将HTML转换为markdown
    let mut html_output = String::new();
@@ -25,7 +22,7 @@ mod test {
     use super::MarkdownParse;
     #[test]
     fn test_to_html(){
-        let html=MarkdownParse::to_html("Hello world, this is a ~~complicated~~ *simple* example..".to_string());
+        let html=MarkdownParse::to_html(&"Hello world, this is a ~~complicated~~ *simple* example..".to_string());
         println!("{:?}",html)
     }
 }
