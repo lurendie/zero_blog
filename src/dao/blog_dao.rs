@@ -37,6 +37,7 @@ use serde::{Serialize,Deserialize};
             ",id);
             let tags=RBATIS.query_decode::<Vec<Tag>>(&*sql, vec![]).await.expect("查询标签异常");
             item.tags = Some(tags);
+            item.create_time=item.create_time.as_str()[0..19].to_string();
         }
         Ok(page)
     }
@@ -77,6 +78,7 @@ use serde::{Serialize,Deserialize};
             ",id);
             let tags=RBATIS.query_decode::<Vec<Tag>>(&*sql, vec![]).await.expect("查询标签异常");
             item.tags = Some(tags);
+            item.create_time=item.create_time.as_str()[0..19].to_string();
         }
         Ok(blog_info)     
     }
@@ -230,7 +232,6 @@ pub(crate)async fn get_all_datetime()->Result<Vec<BlogDateTime>,Error>{
 
 //根据时间查询博文
 pub(crate) async fn get_by_date(date_time:String)->Result<Vec<BlogInfo>,Error>{
-    println!("{}",&date_time);
     let year = &date_time.as_str()[0..4];
     let month = &date_time.as_str()[6..];
     let sql ="SELECT *

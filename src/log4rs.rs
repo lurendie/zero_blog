@@ -8,6 +8,8 @@ impl Log4rs{
     fn init (self)->Self{
         let _ =log4rs::init_file("./conf/log4rs.yaml", Default::default()).unwrap();
         log::info!("开始加载项目, 时间为:[{}]...", get_date_time());
+         //修改日志等级ERROR 非ERROR日志不记录
+         log::set_max_level(log::LevelFilter::Error.to_level().unwrap().to_level_filter());
         self
     }
 }

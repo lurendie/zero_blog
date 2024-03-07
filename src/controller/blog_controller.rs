@@ -32,7 +32,6 @@ pub async  fn blog(params: Query<HashMap<String, String>>) ->impl Responder{
         id=0;
     }
     let blog =blog_service::get_by_id(id).await;
-    println!("{:?}",blog);
     let result =Result::new(200,"请求成功".to_string(), blog);
     HttpResponse::Ok().insert_header(header::ContentType(mime::APPLICATION_JSON)).json(result)
 }

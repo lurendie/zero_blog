@@ -22,7 +22,7 @@ const   _PRIVATE_BLOG_DESCRIPTION :&str="此文章受密码保护！";
 
     pub(crate) async fn get_blog_list_by_is_published(page_num:Option<u64>) -> HashMap<String, Value> {
         let mut map :HashMap<String, Value>=HashMap::new();
-        let mut page_list:Page<BlogInfo>;
+        let  page_list:Page<BlogInfo>;
         if page_num.is_none(){
             page_list =match get_blog_public(1,PAGE_SIZE).await {
                 Ok(ok)=>ok,
@@ -40,10 +40,6 @@ const   _PRIVATE_BLOG_DESCRIPTION :&str="此文章受密码保护！";
                 }
             }
         }
-        //转换HTML
-        let _ = page_list.get_records_mut().iter_mut().map(|item|{
-            item.description =MarkdownParse::to_html(&item.description);
-        });
         map.insert("list".to_string(),to_value!(page_list.get_records()));
         map.insert("totalPage".to_string(),to_value!(page_list.pages()));
         map
@@ -106,8 +102,9 @@ pub async fn get_by_name(name :String,page_num:usize) ->HashMap<String, Value>{
                 Page::new(0, 0)
             }
         };
-    let _ = page_list.get_records_mut().iter_mut().map(|item|{
+    page_list.get_records_mut().iter_mut().for_each(|item|{
         item.description =MarkdownParse::to_html(&item.description);
+        item.create_time=item.create_time.as_str()[0..19].to_string();
     });    
     map.insert("list".to_string(),to_value!(page_list.get_records()));
     map.insert("totalPage".to_string(),to_value!(page_list.pages()));
@@ -134,8 +131,10 @@ pub async fn get_by_tag_name(name :String,page_num:usize) ->HashMap<String, Valu
                 Page::new(0, 0)
             }
         };
-        let _ = page_list.get_records_mut().iter_mut().map(|item|{
+        page_list.get_records_mut().iter_mut().for_each(|item|{
             item.description =MarkdownParse::to_html(&item.description);
+            item.create_time=item.create_time.as_str()[0..19].to_string();
+            
         });    
     map.insert("list".to_string(),to_value!(page_list.get_records()));
     map.insert("totalPage".to_string(),to_value!(page_list.pages()));
@@ -169,13 +168,13 @@ pub(crate) async fn get_archives()->ValueMap{
             blog_archive.id=blog.id.unwrap().to_string();
             blog_archive.password=blog.password;
             blog_archive.privacy=false;
-            blog_archive.day=blog.create_time.format("DD")+"日";
+            blog_archive.day=blog.create_time.as_str()[8..10].to_string()+"日";
             blog_archive.title=blog.title;
             itme_map.push(blog_archive);
         }
         //更改
         item.insert(4, '年');
-        item.insert(10, '日');
+        item.insert(10, '月');
         map.insert(to_value!(item), to_value!(itme_map));
     }
     map
@@ -183,4 +182,16 @@ pub(crate) async fn get_archives()->ValueMap{
 
 pub(crate) async fn get_archives_count()->Option<usize>{
     Some(blog_dao::get_archives_count().await.unwrap() as usize)
+}
+
+#[cfg(test)]
+mod tests{
+    use rbatis::rbdc::DateTime;
+
+    #[test]
+    pub(crate) fn test_datetime(){
+        let time =DateTime::now().format("YYYY-MM-DD hh:mm:ss").parse::<DateTime>().unwrap();
+        println!("{:?}",time)
+
+    }
 }

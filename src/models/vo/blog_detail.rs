@@ -10,7 +10,9 @@ pub struct BlogDetail{
     pub(crate) content :String,
     pub(crate) is_appreciation:u8,
     pub(crate) is_comment_enabled:u8,
+    #[serde(rename(serialize ="createTime"))]
     pub(crate) create_time:DateTime,
+    #[serde(rename(serialize ="updateTime"))]
     pub(crate) update_time:DateTime,
     pub(crate) views:u16,
     pub(crate) words:u16,
