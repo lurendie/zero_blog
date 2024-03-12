@@ -12,7 +12,7 @@ NBlog的Rust 学习开发API版本，本项目是前后端分离开发。
    - 标签 [ 完成 ]
    - 友链 [ 进行中 ]
    - 归档 [ 完成 ]
-   - 动态 [ 进行中 ]
+   - 动态 [ 完成 ]
   
 # 致谢
  感谢[Nblog](https://github.com/lurendie/NBlog)大佬的前端页面

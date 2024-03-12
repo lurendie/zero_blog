@@ -14,7 +14,9 @@ pub async fn run(conf : &Config) ->std::io::Result<()>{
     .allowed_headers(vec![AUTHORIZATION, ACCEPT,ACCESS_CONTROL_ALLOW_ORIGIN,CONTENT_TYPE,ACCESS_CONTROL_REQUEST_HEADERS])
     .max_age(3600); // 设置 preflight 缓存的最大时间
     App::new()
+    //跨域请求
     .wrap(cors)//允许跨域请求
+    //service层
     .service(index_controller::site)
     .service(blog_controller::blogs)
         //.service(web::scope("/admin"))//

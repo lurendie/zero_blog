@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use actix_web::{get, HttpResponse, Responder};
 use actix_web::http::header;
-use log::info;
+use log::error;
 use crate::service::{site_setting_service,category_service,blog_service,tag_service};
 use rbs::to_value;
 use rbs::Value;
@@ -25,6 +25,6 @@ pub async fn site() -> impl Responder {
 
 
 pub async fn default() -> impl Responder {
-    info!("404,找不到页面");
+    error!("404,找不到页面");
     HttpResponse::Found().content_type(mime::TEXT_HTML_UTF_8).body("404,找不到页面")
 }
