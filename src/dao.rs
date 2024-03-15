@@ -4,4 +4,5 @@ pub mod tag_dao;
 pub mod blog_dao;
 pub mod category_dao;
 pub mod moment_dao;
+pub mod friend_dao;
 
