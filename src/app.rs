@@ -3,7 +3,7 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use crate::config::Config;
 use crate::controller::{index_controller,blog_controller,archive_controller,moment_controller,about_controller,friend_controller};
-
+use crate::controller::admin::index_controller as adminIndexController;
 pub async fn run(conf : &Config) ->std::io::Result<()>{
     HttpServer::new(|| {
     // 配置 CORS
@@ -28,6 +28,8 @@ pub async fn run(conf : &Config) ->std::io::Result<()>{
     .service(about_controller::about)
     .service(about_controller::about)
     .service(friend_controller::get_friend)
+    .service(web::scope("/admin/")//admin
+    .default_service(web::to(adminIndexController::default)))
     .default_service(web::to(index_controller::default))
     })
     .bind(format!("{}:{}",conf.server.address,conf.server.port))?

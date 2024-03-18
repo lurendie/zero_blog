@@ -166,7 +166,7 @@ pub(crate) async fn get_archives()->ValueMap{
         for blog in blogs{
             let mut  blog_archive=BlogArchive::new();
             blog_archive.id=blog.id.unwrap().to_string();
-            blog_archive.password=blog.password;
+            blog_archive.password=blog.password.unwrap_or_default();
             blog_archive.privacy=false;
             blog_archive.day=blog.create_time.as_str()[8..10].to_string()+"日";
             blog_archive.title=blog.title;

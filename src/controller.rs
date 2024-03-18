@@ -7,3 +7,4 @@ pub mod index_controller;
 pub mod login_controller;
 pub mod moment_controller;
 pub mod archive_controller;
+pub(crate) mod admin;

@@ -20,12 +20,12 @@ use serde::{Serialize,Deserialize};
             let args = vec![];
             let category = RBATIS.query_decode::<Category>(&sql, args).await.expect("查询分类异常");
             item.category=Some(category);
-            if item.password !=""{
-                item.private =Some(true);
+            if item.password.eq(&Some("".to_string())){
+                item.privacy =Some(true);
             }else{
-                item.private =Some(false)
+                item.privacy =Some(false)
             }
-            item.password =String::from("");
+            item.password =Some(String::from(""));
             //转HTML
             item.description=markdown::to_html(&item.description);
             //TagList
@@ -61,12 +61,12 @@ use serde::{Serialize,Deserialize};
             let args = vec![];
             let category = RBATIS.query_decode::<Category>(&sql, args).await;
             item.category=Some(category.expect("异常"));
-            if item.password !=""{
-                item.private =Some(true);
+            if item.password.is_none(){
+                item.privacy =Some(true);
             }else{
-                item.private =Some(false)
+                item.privacy =Some(false)
             }
-            item.password =String::from("");
+            item.password =Some(String::from(""));
             //转HTML
             item.description=markdown::to_html(&item.description);
             //TagList
@@ -118,12 +118,13 @@ pub async fn get_by_category(name :String,page_num:usize,page_size:u64) ->Result
             Category { id: 0, name: "未知".to_string() }
         });
         item.category=Some(category);
-        if item.password !=""{
-            item.private =Some(true);
+        //passwrod 不是NONE 则加密
+        if item.password.is_none(){
+            item.privacy =Some(false);
         }else{
-            item.private =Some(false)
+            item.privacy =Some(true);
         }
-        item.password =String::from("");
+        item.password =Some(String::from(""));
         //转HTML
         item.description=markdown::to_html(&item.description);
         //TagList
@@ -188,12 +189,12 @@ pub async fn get_by_tag(name :String,page_num:usize,page_size:u64) ->Result<Page
             Category { id: 0, name: "未知".to_string() }
         });
         item.category=Some(category);
-        if item.password !=""{
-            item.private =Some(true);
+        if item.password.is_none(){
+            item.privacy =Some(true);
         }else{
-            item.private =Some(false)
+            item.privacy =Some(false)
         }
-        item.password =String::from("");
+        item.password =Some(String::from(""));
         //转HTML
         item.description=markdown::to_html(&item.description);
         //TagList

@@ -20,7 +20,7 @@ pub struct BlogDetail{
     pub(crate) is_top:u8,
     // todo 结构体引用
     pub(crate) category:Option<Category>,
-    pub(crate) password:String,
+    pub(crate) password:Option<String>,
 
 }
 
@@ -39,7 +39,7 @@ impl BlogDetail{
             read_time:0,
             is_top:0,
             category:None,
-            password:"".to_string(),
+            password:Some("".to_string()),
         }
     }
 }
