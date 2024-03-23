@@ -5,3 +5,4 @@ pub(crate) mod tag_service;
 pub(crate) mod moment_service;
 pub(crate) mod about_service;
 pub(crate) mod friend_service;
+pub mod comments_service;

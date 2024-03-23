@@ -4,6 +4,8 @@ use actix_web::{web, App, HttpServer};
 use crate::config::Config;
 use crate::controller::{index_controller,blog_controller,archive_controller,moment_controller,about_controller,friend_controller};
 use crate::controller::admin::index_controller as adminIndexController;
+
+//app run 
 pub async fn run(conf : &Config) ->std::io::Result<()>{
     HttpServer::new(|| {
     // 配置 CORS
@@ -19,15 +21,14 @@ pub async fn run(conf : &Config) ->std::io::Result<()>{
     //service层
     .service(index_controller::site)
     .service(blog_controller::blogs)
-        //.service(web::scope("/admin"))//
     .service(blog_controller::category)
     .service(blog_controller::blog)
     .service(blog_controller::tag)
     .service(archive_controller::archives)  
     .service(moment_controller::moments)  
     .service(about_controller::about)
-    .service(about_controller::about)
     .service(friend_controller::get_friend)
+    
     .service(web::scope("/admin/")//admin
     .default_service(web::to(adminIndexController::default)))
     .default_service(web::to(index_controller::default))

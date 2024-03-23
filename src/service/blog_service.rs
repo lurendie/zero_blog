@@ -11,9 +11,9 @@ use crate::dao::blog_dao;
 use crate::utils::markdown_parse::MarkdownParse;
 
 //随机博客显示5条
-const RANDOM_BLOG_LIMIT_NUM:u64= 5;
+const RANDOM_BLOG_LIMIT_NUM:u8= 5;
 //最新推荐博客显示3条
-const NEW_BLOG_PAGE_SIZE:u64= 3;
+const NEW_BLOG_PAGE_SIZE:u8= 3;
 //每页显示5条博客简介
 const PAGE_SIZE:u64= 5;
 const _ORDER_BY:&str=  "is_top desc, create_time desc";
