@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::string::ToString;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
 use rbs::value::map::ValueMap;

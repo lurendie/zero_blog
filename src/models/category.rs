@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use rbatis::{crud};
-use rbs;
+use rbatis::crud;
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct Category{
     pub id:u16,

@@ -1,22 +1,24 @@
-
 //配置项
-pub mod config;
+use nblog::config;
 //Rbatis
-pub mod rbatis;
-pub mod models;
-mod log4rs;
-pub mod app;
-pub mod controller;
-pub mod service;
-mod dao;
-mod constant;
-mod r#enum;
-mod utils;
+pub use nblog::rbatis;
+//模型
+pub use nblog::models;
+// 应用
+pub use nblog::app;
+
+//控制
+pub use nblog::controller;
+
+//日志
+use nblog::log4rs;
+//服务
+pub use nblog::service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     //初始化配置
-    let conf =config::default();
+    let conf = config::default();
     //初始化Rabits
     rbatis::init_rbatis(conf).await.expect("数据库初始化失败");
     //初始化日志
@@ -24,6 +26,3 @@ async fn main() -> std::io::Result<()> {
     //Service run
     app::run(conf).await
 }
-
-
-

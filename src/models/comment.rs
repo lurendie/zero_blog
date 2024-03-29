@@ -1,6 +1,5 @@
 use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
-use rbs;
 //评论
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct Comment{

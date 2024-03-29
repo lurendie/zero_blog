@@ -14,11 +14,11 @@ pub(crate) async fn get_friend()->ValueMap{
     friends.iter()
     .for_each(|item|{
         if item.name_en=="friendContent"{
-            friend_info.insert(to_value!("content"), to_value!(markdown::to_html(&item.value)))
+            friend_info.insert(to_value!("content"), to_value!(markdown::to_html(&item.value)));
         }
         if item.name_en=="friendCommentEnabled"{
-            friend_info.insert(to_value!("commentEnabled"), to_value!(item.value=="1"))
-        }
+            friend_info.insert(to_value!("commentEnabled"), to_value!(item.value=="1"));
+        };
     });
     let friend_list=friend_dao::get_friends().await.unwrap_or_else(|e|{
         log::error!("{}",e);

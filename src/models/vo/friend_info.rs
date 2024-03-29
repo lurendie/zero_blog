@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use rbatis::{crud, impl_select};
-use rbs;
 #[derive(Debug, Clone,Serialize,Deserialize)]
 //友链
 pub(crate) struct FriendInfo{

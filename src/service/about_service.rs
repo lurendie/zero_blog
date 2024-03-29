@@ -2,7 +2,6 @@ use crate::models::about::About;
 use crate::rbatis::RBATIS;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
-use markdown;
 
 //获取所有about信息
 pub(crate) async fn get_about()->ValueMap{
