@@ -6,18 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "app-dev"
+name = "dev"
 path = "src/bin/app_dev.rs"
 
 [dependencies]
 actix-web = "4.0.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.6.2", features = [
-    "mysql",
-    "runtime-tokio-rustls",
-    "chrono",
-] }
+
 tokio = { version = "1", features = ["full"] }
 lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
@@ -29,9 +25,9 @@ rbatis = "4.5.7"
 log = "0.4"
 log4rs = "1.0"
 mime = "0.3.17"
-rbson = "2.0.5"
+#rbson = "2.0.5"
 markdown = "1.0.0-alpha.16"
-rand = "0.8" #随机数
+rand = "0.8"                     #随机数
 rbdc-mysql = { version = "4.5" }
 rbs = { version = "4.5" }
-pulldown-cmark = "0.8" ##Markdown转HTML
+pulldown-cmark = "0.8"           ##Markdown转HTML
