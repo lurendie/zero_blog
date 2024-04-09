@@ -35,15 +35,16 @@ impl BlogDetail {
     }
 }
 
+// int 类型转boolean
 fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
 {
-    match i32::deserialize(deserializer)? {
+    match u64::deserialize(deserializer)? {
         0 => Ok(false),
         1 => Ok(true),
         other => Err(serde::de::Error::invalid_value(
-            Unexpected::Unsigned(other.try_into().unwrap()),
+            Unexpected::Unsigned(other),
             &"0 or 1",
         )),
     }

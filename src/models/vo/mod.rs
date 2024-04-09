@@ -1,0 +1,11 @@
+pub mod badge;
+pub mod blog_archive;
+pub mod blog_detail;
+pub mod blog_info;
+pub mod comment;
+pub mod copyright;
+pub mod favorite;
+pub(crate) mod friend_info;
+pub mod introduction;
+pub mod page_request;
+pub mod result;
