@@ -19,8 +19,6 @@ pub use nblog::service;
 async fn main() -> std::io::Result<()> {
     //初始化配置
     let conf = config::default();
-    //初始化Rabits
-    rbatis::init_rbatis(conf).await.expect("数据库初始化失败");
     //初始化日志
     log4rs::Log4rs::new();
     //Service run

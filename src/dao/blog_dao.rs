@@ -20,55 +20,6 @@ pub async fn get_blog_list_by_is_published(
         log::error!("{e}",);
         Page::new(0, 0)
     });
-    for item in page.records.iter_mut() {
-        let id = item.id.unwrap();
-        let sql = format!(
-            "
-               select
-                id,category_name as name
-               from
-	            category
-	            where category.id =(select category_id  from blog where blog.id ={})
-            ",
-            id
-        );
-        let args = vec![];
-        let category = RBATIS
-            .query_decode::<Category>(&sql, args)
-            .await
-            .unwrap_or_else(|e: rbatis::Error| {
-                log::error!("异常:{}", e);
-                Category::default()
-            });
-        item.category = Some(category);
-        if item.password.eq(&Some("".to_string())) {
-            item.privacy = Some(true);
-        } else {
-            item.privacy = Some(false)
-        }
-        item.password = Some(String::from(""));
-        //转HTML
-        item.description = markdown::to_html(&item.description);
-        //TagList
-        let sql = format!(
-            "
-            select
-            tag.id as id,tag_name as name,color
-            from blog_tag,tag
-            where blog_tag.tag_id = tag.id and blog_tag.blog_id = {}
-            ",
-            id
-        );
-        let tags = RBATIS
-            .query_decode::<Vec<Tag>>(&*sql, vec![])
-            .await
-            .unwrap_or_else(|e| {
-                log::error!("异常:{e}");
-                vec![]
-            });
-        item.tags = Some(tags);
-        item.create_time = item.create_time.as_str()[0..19].to_string();
-    }
     Ok(page)
 }
 
@@ -78,56 +29,14 @@ pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
              blog.id,blog.title,blog.description,blog.create_time,blog.views ,blog.words,blog.read_time,blog.password,blog.is_top
          from
              blog  WHERE is_published = ?";
-    let mut blog_info = RBATIS
+    let blog_info = RBATIS
         .query_decode::<Vec<BlogInfo>>(&sql, vec![to_value!(true)])
         .await
         .unwrap_or_else(|e| {
             log::error!("{e}");
             vec![]
         });
-    for item in blog_info.iter_mut() {
-        let id = item.id.unwrap();
-        let sql = format!(
-            "
-            select
-             id,category_name as name
-            from
-             category
-             where category.id =(select category_id  from blog where blog.id ={})
-         ",
-            id
-        );
-        let args = vec![];
-        let category = RBATIS.query_decode::<Category>(&sql, args).await;
-        item.category = Some(category.expect("异常"));
-        if item.password.is_none() {
-            item.privacy = Some(true);
-        } else {
-            item.privacy = Some(false)
-        }
-        item.password = Some(String::from(""));
-        //转HTML
-        item.description = markdown::to_html(&item.description);
-        //TagList
-        let sql = format!(
-            "
-            select
-            tag.id as id,tag_name as name,color
-            from blog_tag,tag
-            where blog_tag.tag_id = tag.id and blog_tag.blog_id = {}
-            ",
-            id
-        );
-        let tags = RBATIS
-            .query_decode::<Vec<Tag>>(&*sql, vec![])
-            .await
-            .unwrap_or_else(|e| {
-                log::error!("异常:{e}");
-                vec![]
-            });
-        item.tags = Some(tags);
-        item.create_time = item.create_time.as_str()[0..19].to_string();
-    }
+    
     Ok(blog_info)
 }
 
@@ -156,7 +65,7 @@ pub async fn get_by_category(
     });
     //博文查询
     let page_request = PageRequest::new(page_num.try_into().unwrap(), page_size);
-    let mut page = BlogInfo::select_page_by_categoryid(
+    let page = BlogInfo::select_page_by_categoryid(
         &RBATIS.acquire().await.expect("异常"),
         &page_request,
         category.id.to_string().as_str(),
@@ -166,56 +75,6 @@ pub async fn get_by_category(
         log::error!("异常:{e}");
         Page::new(0, 0)
     });
-    for item in page.records.iter_mut() {
-        let id = item.id.unwrap();
-        let sql = format!(
-            "
-           select
-            id,category_name as name
-           from
-            category
-            where category.id =(select category_id  from blog where blog.id =\"{}\")
-        ",
-            id
-        );
-        let args = vec![];
-        let category_query = RBATIS.query_decode::<Category>(&*sql, args).await;
-        let category = category_query.unwrap_or_else(|e| {
-            log::error!("{:?}", e);
-            Category {
-                id: 0,
-                name: "未知".to_string(),
-            }
-        });
-        item.category = Some(category);
-        //passwrod 不是NONE 则加密
-        if item.password.is_none() {
-            item.privacy = Some(false);
-        } else {
-            item.privacy = Some(true);
-        }
-        item.password = Some(String::from(""));
-        //转HTML
-        item.description = markdown::to_html(&item.description);
-        //TagList
-        let sql = format!(
-            "
-        select
-        tag.id as id,tag_name as name,color
-        from blog_tag,tag
-        where blog_tag.tag_id = tag.id and blog_tag.blog_id = \"{}\"
-        ",
-            id
-        );
-        let tags = RBATIS
-            .query_decode::<Vec<Tag>>(&*sql, vec![])
-            .await
-            .unwrap_or_else(|e| {
-                log::error!("异常:{e}");
-                vec![]
-            });
-        item.tags = Some(tags);
-    }
     Ok(page)
 }
 
@@ -264,7 +123,7 @@ pub async fn get_by_tag(
     ];
     let blog_query = RBATIS.query_decode::<Vec<BlogInfo>>(&sql, args).await;
 
-    let mut page = Page {
+    let page = Page {
         records: blog_query.unwrap_or_else(|e| {
             log::error!("{:?}", e);
             vec![]
@@ -274,55 +133,6 @@ pub async fn get_by_tag(
         page_size,
         do_count: true,
     };
-    for item in page.records.iter_mut() {
-        let id = item.id.unwrap();
-        let sql = format!(
-            "
-           select
-            id,category_name as name
-           from
-            category
-            where category.id =(select category_id  from blog where blog.id =\"{}\")
-        ",
-            id
-        );
-        let args = vec![];
-        let category_query = RBATIS.query_decode::<Category>(&*sql, args).await;
-        let category = category_query.unwrap_or_else(|e| {
-            println!("{:?}", e);
-            Category {
-                id: 0,
-                name: "未知".to_string(),
-            }
-        });
-        item.category = Some(category);
-        if item.password.is_none() {
-            item.privacy = Some(true);
-        } else {
-            item.privacy = Some(false)
-        }
-        item.password = Some(String::from(""));
-        //转HTML
-        item.description = markdown::to_html(&item.description);
-        //TagList
-        let sql = format!(
-            "
-        select
-        tag.id as id,tag_name as name,color
-        from blog_tag,tag
-        where blog_tag.tag_id = tag.id and blog_tag.blog_id = \"{}\"
-        ",
-            id
-        );
-        let tags = RBATIS
-            .query_decode::<Vec<Tag>>(&*sql, vec![])
-            .await
-            .unwrap_or_else(|e| {
-                log::error!("{}", e);
-                vec![]
-            });
-        item.tags = Some(tags);
-    }
     Ok(page)
 }
 

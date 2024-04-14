@@ -6,18 +6,18 @@ use crate::controller::{
 };
 use actix_cors::Cors;
 use actix_web::http::header::{
-    ACCEPT, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_HEADERS, AUTHORIZATION,
-    CONTENT_TYPE,
+    ACCEPT, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_MAX_AGE, ACCESS_CONTROL_REQUEST_HEADERS,
+    AUTHORIZATION, CONTENT_TYPE,
 };
 use actix_web::{web, App, HttpServer};
 
 //app run
-pub async fn run(conf: &Config) -> std::io::Result<()> {
+pub async fn run(conf: &'static Config) -> std::io::Result<()> {
     HttpServer::new(|| {
         // 配置 CORS
         let cors = Cors::default()
-            //.allowed_origin(&conf.server.front_adderss.as_str().clone()) // 只允许 example.com 域进行跨域请求,暂时不开启
-            .allow_any_origin()
+            .allowed_origin(conf.server.front_adderss.as_str()) // 只允许 example.com 域进行跨域请求,暂时不开启
+            //.allow_any_origin()
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"]) // 允许的 HTTP 方法
             .allowed_headers(vec![
                 AUTHORIZATION,
@@ -25,8 +25,10 @@ pub async fn run(conf: &Config) -> std::io::Result<()> {
                 ACCESS_CONTROL_ALLOW_ORIGIN,
                 CONTENT_TYPE,
                 ACCESS_CONTROL_REQUEST_HEADERS,
+                ACCESS_CONTROL_MAX_AGE,
             ])
             .max_age(3600); // 设置 preflight 缓存的最大时间
+
         App::new()
             //跨域请求
             .wrap(cors) //允许跨域请求
@@ -48,7 +50,7 @@ pub async fn run(conf: &Config) -> std::io::Result<()> {
             )
             .default_service(web::to(index_controller::default))
     })
-    .bind(format!("{}:{}", conf.server.address, conf.server.port))?
+    .bind(format!("{}:{}", conf.server.host, conf.server.port))?
     .run()
     .await
 }

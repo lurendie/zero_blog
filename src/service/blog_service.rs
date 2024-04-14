@@ -3,8 +3,8 @@ use crate::dao::blog_dao::{
     get_blog_list, get_blog_list_by_is_published as get_blog_public, get_by_category,
     get_by_id as getById, get_by_tag,
 };
+use crate::dao::{category_dao, tag_dao};
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
-use crate::utils::markdown_parse::MarkdownParse;
 use rand::Rng;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
@@ -27,7 +27,10 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
     let page_list: Page<BlogInfo>;
     if page_num.is_none() {
         page_list = match get_blog_public(1, PAGE_SIZE).await {
-            Ok(ok) => ok,
+            Ok(mut ok) => {
+                bloginfo_handle(ok.get_records_mut()).await;
+                ok
+            }
             Err(e) => {
                 log::error!("BlogList查询失败:{:?}", e);
                 Page::new(0, 0)
@@ -35,7 +38,10 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
         };
     } else {
         page_list = match get_blog_public(page_num.expect("异常！"), PAGE_SIZE).await {
-            Ok(ok) => ok,
+            Ok(mut ok) => {
+                bloginfo_handle(ok.get_records_mut()).await;
+                ok
+            }
             Err(e) => {
                 log::error!("BlogList查询失败:{:?}", e);
                 Page::new(0, 0)
@@ -49,7 +55,8 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
 //随机文章
 pub async fn get_blog_list_random() -> Result<Vec<BlogInfo>, rbatis::Error> {
     match get_blog_list().await {
-        Ok(list) => {
+        Ok(mut list) => {
+            bloginfo_handle(&mut list).await;
             //计数
             let mut count = 0;
             let mut rng = rand::thread_rng();
@@ -77,7 +84,8 @@ pub async fn get_blog_list_random() -> Result<Vec<BlogInfo>, rbatis::Error> {
 //newBlog
 pub async fn get_blog_list_new() -> Result<Vec<BlogInfo>, rbatis::Error> {
     match get_blog_list().await {
-        Ok(list) => {
+        Ok(mut list) => {
+            bloginfo_handle(&mut list).await;
             //计数
             let mut count = 0;
             Ok(list
@@ -106,14 +114,17 @@ pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value
     let mut map: HashMap<String, Value> = HashMap::new();
     let mut page_list: Page<BlogInfo>;
     page_list = match get_by_category(name, page_num, PAGE_SIZE).await {
-        Ok(ok) => ok,
+        Ok(mut ok) => {
+            bloginfo_handle(ok.get_records_mut()).await;
+            ok
+        }
         Err(e) => {
             log::error!("BlogList查询失败:{}", e);
             Page::new(0, 0)
         }
     };
     page_list.get_records_mut().iter_mut().for_each(|item| {
-        item.description = MarkdownParse::to_html(&item.description);
+        item.description = markdown::to_html(&item.description);
         item.create_time = item.create_time.as_str()[0..19].to_string();
     });
     map.insert("list".to_string(), to_value!(page_list.get_records()));
@@ -123,7 +134,7 @@ pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value
 //根据ID查找博文
 pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
     let mut blog = getById(id).await.unwrap_or_else(|| BlogDetail::new());
-    blog.content = MarkdownParse::to_html(&blog.content);
+    blog.content = markdown::to_html(&blog.content);
     Some(blog)
 }
 
@@ -132,14 +143,17 @@ pub async fn get_by_tag_name(name: String, page_num: usize) -> HashMap<String, V
     let mut map: HashMap<String, Value> = HashMap::new();
     let mut page_list: Page<BlogInfo>;
     page_list = match get_by_tag(name, page_num, PAGE_SIZE).await {
-        Ok(ok) => ok,
+        Ok(mut ok) => {
+            bloginfo_handle(ok.get_records_mut()).await;
+            ok
+        }
         Err(e) => {
             log::error!("BlogList查询失败:{}", e);
             Page::new(0, 0)
         }
     };
     page_list.get_records_mut().iter_mut().for_each(|item| {
-        item.description = MarkdownParse::to_html(&item.description);
+        item.description = markdown::to_html(&item.description);
         item.create_time = item.create_time.as_str()[0..19].to_string();
     });
     map.insert("list".to_string(), to_value!(page_list.get_records()));
@@ -190,6 +204,27 @@ pub(crate) async fn get_archives() -> ValueMap {
 
 pub(crate) async fn get_archives_count() -> Option<usize> {
     Some(blog_dao::get_archives_count().await.unwrap() as usize)
+}
+
+/**
+ * 处理BlogInfo结构体依赖关系
+ */
+async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
+    for item in list.iter_mut() {
+        let id = item.id.unwrap();
+        item.category = Some(category_dao::get_by_bloginfo_id(id).await.unwrap());
+        if item.password.is_none() {
+            item.privacy = Some(true);
+        } else {
+            item.privacy = Some(false)
+        }
+        item.password = Some(String::from(""));
+        //转HTML
+        item.description = markdown::to_html(&item.description);
+        let tags = tag_dao::get_blog_tags(id).await;
+        item.tags = Some(tags);
+        item.create_time = item.create_time.as_str()[0..19].to_string();
+    }
 }
 
 #[cfg(test)]

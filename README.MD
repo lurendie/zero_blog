@@ -9,7 +9,9 @@
    - 友链 [ 完成 ]
    - 归档 [ 完成 ]
    - 动态 [ 完成 ]
-   - 评论 [进行中]
+   - 评论 [ 完成 ]
+   - JWT  [进行中]
+   - Redis or cache DataInfo [进行中]
   
 # Thanks
  感谢[Nblog](https://github.com/Naccl/NBlog)的前端页面

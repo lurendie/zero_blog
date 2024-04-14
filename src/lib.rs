@@ -20,5 +20,7 @@ pub mod log4rs;
 pub mod service;
 //工具
 mod utils;
+//redis 
+mod redis;
 
 
