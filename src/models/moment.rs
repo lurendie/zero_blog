@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use rbatis::{crud, impl_select_page};
-use rbatis::rbdc::datetime::DateTime;
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct Moment{
     id:Option<u64>,
-    content:String,
-    create_time:DateTime,
+    pub(crate)content:String,
+    #[serde(rename(serialize ="createTime"))]
+    pub(crate)create_time:String,
     likes:u64,
     is_published:u8,
 }

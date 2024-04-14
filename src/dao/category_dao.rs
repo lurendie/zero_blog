@@ -1,14 +1,36 @@
 use crate::models::category::Category;
 use crate::rbatis::RBATIS;
 
-//查询所有分类
-pub async fn get_list() ->Vec<Category>{
-    let sql ="select id,category_name as name from category";
-   let category:Vec<Category> =match RBATIS.query_decode(sql,Vec::new()).await{
-        Ok(ok)=>{
-            ok
-        },
-       Err(e)=>panic!("{}",e),
+/**
+ * 获取所有的分类
+ */
+pub async fn get_list() -> Vec<Category> {
+    let sql = "select id,category_name as name from category";
+    let category: Vec<Category> = match RBATIS.query_decode(sql, Vec::new()).await {
+        Ok(ok) => ok,
+        Err(e) => {
+            log::error!("{e}");
+            vec![]
+        }
     };
+    category
+}
+
+/**
+ * 根据Blog_ID查询
+ */
+pub async fn get_by_bloginfo_id(id: u16) -> Result<Category, rbatis::rbdc::Error> {
+    let sql = format!(
+        "
+        select
+         id,category_name as name
+        from
+         category
+         where category.id =(select category_id  from blog where blog.id ={})
+     ",
+        id
+    );
+    let args = vec![];
+    let category = RBATIS.query_decode::<Category>(&sql, args).await;
     category
 }

@@ -1,4 +1,4 @@
-use crate::models::site_setting::{SiteSetting};
+use crate::models::site_setting::SiteSetting;
 use crate::rbatis::RBATIS;
 
     pub async fn get_list() -> Vec<SiteSetting> {

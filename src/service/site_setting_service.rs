@@ -40,7 +40,7 @@ use crate::models::vo::{introduction,badge::Badge,copyright::Copyright,favorite:
                         },
                         site_setting_constants::ROLL_TEXT => {
                             let arr  =v.value.split(",").map(String::from).collect();
-                            introduction.rollText=arr;
+                            introduction.roll_text=arr;
                         }
                         ,
                         _ => ()

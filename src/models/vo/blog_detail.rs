@@ -1,26 +1,54 @@
 use crate::models::category::Category;
 use rbatis::rbdc::datetime::DateTime;
-use rbatis::{crud,impl_select};
-use serde::{Serialize,Deserialize};
+use rbatis::{crud, impl_select};
+use serde::de::Unexpected;
+use serde::{Deserialize, Deserializer, Serialize};
 //博客详情信息
-#[derive(Debug, Clone,Serialize,Deserialize)]
-pub struct BlogDetail{
-    id :Option<u16>,
-    title:String,
-    content :String,
-    is_appreciation:u8,
-    is_comment_enabled:u8,
-    create_time:DateTime,
-    update_time:DateTime,
-    views:u16,
-    words:u16,
-    read_time:u16,
-    is_top:u8,
-    // todo 结构体引用
-    category:Option<Category>,
-    password:String,
-
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BlogDetail {
+    pub(crate) id: Option<u16>,
+    pub(crate) title: String,
+    pub(crate) content: String,
+    #[serde(deserialize_with = "bool_from_int")]
+    pub(crate) is_appreciation: bool,
+    #[serde(
+        rename(serialize = "commentEnabled"),
+        deserialize_with = "bool_from_int"
+    )]
+    pub(crate) is_comment_enabled: bool,
+    #[serde(rename(serialize = "createTime"))]
+    pub(crate) create_time: DateTime,
+    #[serde(rename(serialize = "updateTime"))]
+    pub(crate) update_time: DateTime,
+    pub(crate) views: u16,
+    pub(crate) words: u16,
+    pub(crate) read_time: u16,
+    #[serde(deserialize_with = "bool_from_int")]
+    pub(crate) is_top: bool,
+    pub(crate) category: Option<Category>,
+    pub(crate) password: Option<String>,
 }
 
-crud!(BlogDetail {},"blog");
+impl BlogDetail {
+    pub(crate) fn new() -> Self {
+        BlogDetail::default()
+    }
+}
+
+// int 类型转boolean
+fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match u64::deserialize(deserializer)? {
+        0 => Ok(false),
+        1 => Ok(true),
+        other => Err(serde::de::Error::invalid_value(
+            Unexpected::Unsigned(other),
+            &"0 or 1",
+        )),
+    }
+}
+
+crud!(BlogDetail {}, "blog");
 impl_select!(BlogDetail{select_by_id(id:String) -> Option => "`where id = #{id} limit 1`"},"blog");

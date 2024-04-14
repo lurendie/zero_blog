@@ -5,7 +5,7 @@ server:
 mysql:
   address: "127.0.0.1"
   port: 3306
-  data_base: "nblog"
+  data_base: "zero_api"
   user_name: "root"
   password: "root"
 redis:

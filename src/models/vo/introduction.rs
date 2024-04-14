@@ -11,7 +11,8 @@ pub struct Introduction{
     pub bilibili :String,
     pub netease :String,
     pub email :String,
-    pub rollText:Vec<String>,
+    #[serde(rename(serialize ="rollText"))]
+    pub roll_text:Vec<String>,
     pub favorites:Vec<Favorite>
 }
 
@@ -26,7 +27,7 @@ impl Introduction{
             bilibili: "".to_string(),
             netease: "".to_string(),
             email: "".to_string(),
-            rollText: vec![],
+            roll_text: vec![],
             favorites: vec![],
         }
     }
