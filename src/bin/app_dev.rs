@@ -7,7 +7,7 @@ pub use nblog::models;
 // 应用
 pub use nblog::app;
 
-//控制
+//控制器
 pub use nblog::controller;
 
 //日志
@@ -17,10 +17,10 @@ pub use nblog::service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    //初始化配置
+    //1. 初始化配置
     let conf = config::default();
-    //初始化日志
+    //2. 初始化日志
     log4rs::Log4rs::new();
-    //Service run
+    //3. Service run
     app::run(conf).await
 }

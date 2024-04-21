@@ -1,5 +1,5 @@
 use actix_web::{http::header, HttpResponse};
-use rbs::value::map::ValueMap;
+use rbs::{value::map::ValueMap, Value};
 //封装响应结果
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +42,7 @@ impl<T> Result<T> {
     }
 }
 //针对于ValueMap具体实现
-impl Result<ValueMap> {
+impl Result<Value> {
     //无异常返回
     pub fn ok_json(&self) -> HttpResponse {
         HttpResponse::Ok()

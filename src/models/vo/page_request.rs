@@ -10,6 +10,7 @@ pub struct PageRequest {
     page: Option<u16>,
     #[serde(rename = "blogId")]
     blog_id: Option<u16>,
+    password: Option<String>,
 }
 
 impl PageRequest {
@@ -24,5 +25,8 @@ impl PageRequest {
     }
     pub fn page(&self) -> u16 {
         self.page.unwrap_or_default()
+    }
+    pub fn password(&self) -> String {
+        self.password.to_owned().unwrap_or_default()
     }
 }

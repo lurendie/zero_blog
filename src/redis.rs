@@ -12,6 +12,7 @@ pub static REDIS: Lazy<Client> = Lazy::new(|| {
     ))
     .unwrap();
     // client.get_connection();
+    log::info!("redis连接初始化完成！");
     client
 });
 

@@ -11,7 +11,10 @@ use actix_web::http::header::{
 };
 use actix_web::{web, App, HttpServer};
 
-//app run
+/**
+ * 服务启动
+ * return io
+ */
 pub async fn run(conf: &'static Config) -> std::io::Result<()> {
     HttpServer::new(|| {
         // 配置 CORS

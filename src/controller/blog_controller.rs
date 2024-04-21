@@ -3,8 +3,8 @@ use crate::models::vo::result::Result;
 use crate::service;
 use actix_web::http::header;
 use actix_web::web::Query;
-use actix_web::{get, HttpResponse, Responder};
-use rbs::Value;
+use actix_web::{get, post, HttpResponse, Responder};
+use rbs::{to_value, Value};
 use service::blog_service;
 use std::collections::HashMap;
 
@@ -92,4 +92,17 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
     HttpResponse::Ok()
         .insert_header(header::ContentType(mime::APPLICATION_JSON))
         .json(result)
+}
+
+/**
+ * 检测Blog PassWrod 的正确性
+ */
+#[post("/checkBlogPassword")]
+pub async fn check_blog_password(data: Query<PageRequest>) -> impl Responder {
+    if data.blog_id() > 0 && !data.password().is_empty() {
+        let blog_info = blog_service::get_by_id(data.blog_id()).await;
+        Result::ok("请求成功!".to_string(), Some(to_value!(blog_info))).ok_json()
+    } else {
+        Result::ok("参数有误!".to_string(), None).ok_json()
+    }
 }

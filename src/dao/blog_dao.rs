@@ -11,7 +11,7 @@ pub async fn get_blog_list_by_is_published(
     page_num: u64,
     page_size: u64,
 ) -> Result<Page<BlogInfo>, rbatis::Error> {
-    let mut page = BlogInfo::select_page(
+    let  page = BlogInfo::select_page(
         &RBATIS.acquire().await.expect("异常"),
         &PageRequest::new(page_num, page_size),
     )

@@ -20,6 +20,10 @@ pub const SITE_INFO_MAP: &str = "siteInfoMap";
  */
 pub const NEW_BLOG_LIST: &str = "newBlogList";
 /**
+ * 随机推荐博客key
+ */
+pub const RANDOM_BLOG_LIST: &str = "randomBlogList";
+/**
  * 关于我页面key
  */
 pub const ABOUT_INFO_MAP: &str = "aboutInfoMap";

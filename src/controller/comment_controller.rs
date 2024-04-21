@@ -1,3 +1,10 @@
+/*
+ * @Author: lurendie 549700459@qq.com
+ * @Date: 2024-02-24 22:58:03
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-04-21 23:26:00
+ * @FilePath: \zero_blog\src\controller\comment_controller.rs
+ */
 use crate::models::vo::{page_request::PageRequest, result::Result};
 use crate::service::comments_service;
 use actix_web::web::Query;
@@ -35,5 +42,5 @@ pub(crate) async fn get_comments(data: Option<Query<PageRequest>>) -> impl Respo
         "closeComment".into(),
         to_value!(comments_service::get_close_comments(page_request.blog_id()).await),
     );
-    Result::ok("获取成功!".to_string(), Some(data)).ok_json()
+    Result::ok("获取成功!".to_string(), Some(to_value!(data))).ok_json()
 }

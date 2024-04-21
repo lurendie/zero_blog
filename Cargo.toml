@@ -23,7 +23,8 @@ log = "0.4"
 log4rs = "1.0"
 mime = "0.3.17"
 markdown = "1.0.0-alpha.16"
-rand = "0.8"                                              #随机数
+rand = "0.8"                                                      #随机数
 rbdc-mysql = { version = "4.5" }
 rbs = { version = "4.5" }
-redis = { version = "0.25.3", features = ["tokio-comp"] } #redis 异步IO
+redis = { version = "0.25.3", features = ["tokio-comp", "json"] } #redis 异步IO
+actix-jwt-session = "1.0.5"

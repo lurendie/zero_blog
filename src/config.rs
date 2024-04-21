@@ -1,7 +1,14 @@
+/*
+ * @Author: lurendie 549700459@qq.com
+ * @Date: 2024-02-24 22:58:03
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-04-19 15:57:18
+ * @FilePath: \zero_blog\src\config.rs
+ */
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::fs;
-//配置文件
+//配置文件结构体
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
     pub server: Server,
