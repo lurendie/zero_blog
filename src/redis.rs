@@ -1,3 +1,10 @@
+/*
+ * @Author: lurendie 549700459@qq.com
+ * @Date: 2024-04-12 22:39:32
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-04-24 22:33:09
+ * @FilePath: \zero_blog\src\redis.rs
+ */
 use once_cell::sync::Lazy;
 use redis::Client;
 
@@ -12,7 +19,7 @@ pub static REDIS: Lazy<Client> = Lazy::new(|| {
     ))
     .unwrap();
     // client.get_connection();
-    log::info!("redis连接初始化完成！");
+    // log::info!("redis连接初始化完成！");
     client
 });
 

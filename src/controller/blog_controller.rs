@@ -2,17 +2,20 @@ use crate::models::vo::page_request::PageRequest;
 use crate::models::vo::result::Result;
 use crate::service;
 use actix_web::http::header;
-use actix_web::web::Query;
-use actix_web::{get, post, HttpResponse, Responder};
+use actix_web::web::{Json, Query};
+use actix_web::{get, post, routes, HttpResponse, Responder};
 use rbs::{to_value, Value};
 use service::blog_service;
 use std::collections::HashMap;
 
 //按置顶、创建时间排序 分页查询博客简要信息列表
+#[routes]
+#[options("/site")]
 #[get("/blogs")]
 pub async fn blogs(params: Query<PageRequest>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
-    let page = blog_service::get_blog_list_by_is_published(Some(params.page_num() as u64)).await;
+    let page =
+        blog_service::get_blog_list_by_is_published(Some(params.get_page_num() as u64)).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok()
@@ -98,11 +101,24 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
  * 检测Blog PassWrod 的正确性
  */
 #[post("/checkBlogPassword")]
-pub async fn check_blog_password(data: Query<PageRequest>) -> impl Responder {
-    if data.blog_id() > 0 && !data.password().is_empty() {
-        let blog_info = blog_service::get_by_id(data.blog_id()).await;
-        Result::ok("请求成功!".to_string(), Some(to_value!(blog_info))).ok_json()
+pub async fn check_blog_password(data: Json<PageRequest>) -> impl Responder {
+    if data.get_blog_id() > 0 {
+        let blog_info = blog_service::get_by_id(data.get_blog_id()).await;
+        if let Some(blog_info) = &blog_info {
+            if let Some(password) = &blog_info.password {
+                if *password == data.get_password() {
+                    Result::ok("验证成功,密码正确!".to_string(), Some(to_value!(blog_info)))
+                        .ok_json()
+                } else {
+                    Result::error("验证失败,密码错误!".to_string()).error_json()
+                }
+            } else {
+                Result::error("验证失败,密码错误!".to_string()).error_json()
+            }
+        } else {
+            Result::error("验证失败,密码错误!".to_string()).error_json()
+        }
     } else {
-        Result::ok("参数有误!".to_string(), None).ok_json()
+        Result::error("参数有误!".to_string()).error_json()
     }
 }

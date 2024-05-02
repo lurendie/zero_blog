@@ -23,9 +23,9 @@ pub(crate) async fn get_comments(data: Option<Query<PageRequest>>) -> impl Respo
     let page_request = data.unwrap();
 
     let list = comments_service::get_comments_page(
-        page_request.page_num() as usize,
-        page_request.page(),
-        page_request.blog_id(),
+        page_request.get_page_num() as usize,
+        page_request.get_page(),
+        page_request.get_blog_id(),
     )
     .await;
     comments.insert("list".into(), to_value!(list.get_records()));
@@ -35,12 +35,12 @@ pub(crate) async fn get_comments(data: Option<Query<PageRequest>>) -> impl Respo
     data.insert(
         "allComment".into(),
         to_value!(rbs::Value::String(
-            comments_service::get_all_comments(page_request.blog_id()).await
+            comments_service::get_all_comments(page_request.get_blog_id()).await
         )),
     );
     data.insert(
         "closeComment".into(),
-        to_value!(comments_service::get_close_comments(page_request.blog_id()).await),
+        to_value!(comments_service::get_close_comments(page_request.get_blog_id()).await),
     );
     Result::ok("获取成功!".to_string(), Some(to_value!(data))).ok_json()
 }

@@ -25,7 +25,7 @@ pub static RBATIS: Lazy<RBatis> = Lazy::new(|| {
         .database(conf.mysql.data_base.as_str())
         .host(conf.mysql.host.as_str());
     let _ = &rbatis.init_option::<Driver, MySqlConnectOptions, DefaultPool>(Driver {}, opts);
-    log::info!("MySQL连接初始化完成！");
+    //log::info!("MySQL连接初始化完成！");
     rbatis.set_intercepts(vec![Arc::new(LogInterceptor::new(LevelFilter::Debug))]);
     rbatis
 });

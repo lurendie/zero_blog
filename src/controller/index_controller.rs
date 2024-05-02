@@ -2,14 +2,14 @@
  * @Author: lurendie 549700459@qq.com
  * @Date: 2024-03-26 00:08:12
  * @LastEditors: lurendie
- * @LastEditTime: 2024-04-21 23:26:26
+ * @LastEditTime: 2024-05-02 22:02:04
  * @FilePath: \zero_blog\src\controller\index_controller.rs
  */
 use crate::models::vo::result::Result;
 
 use crate::service::{blog_service, category_service, site_setting_service, tag_service};
 use actix_web::http::header;
-use actix_web::{get, HttpResponse, Responder};
+use actix_web::{get, options, routes, HttpResponse, Responder};
 use rbs::to_value;
 use rbs::Value;
 use std::collections::HashMap;
@@ -17,7 +17,9 @@ use std::collections::HashMap;
 /**
    Site 数据
 */
+#[routes]
 #[get("/site")]
+#[options("/site")]
 pub async fn site() -> impl Responder {
     let mut map: HashMap<String, Value> = site_setting_service::get_site_info().await;
     let category_list = category_service::get_list().await;
