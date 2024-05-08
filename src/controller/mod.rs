@@ -8,5 +8,6 @@ pub mod friend_controller;
 pub mod index_controller;
 pub mod login_controller;
 pub mod moment_controller;
+pub mod user_controller;
 
 

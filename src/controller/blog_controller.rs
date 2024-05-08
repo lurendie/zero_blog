@@ -3,7 +3,7 @@ use crate::models::vo::result::Result;
 use crate::service;
 use actix_web::http::header;
 use actix_web::web::{Json, Query};
-use actix_web::{get, post, routes, HttpResponse, Responder};
+use actix_web::{routes, HttpResponse, Responder};
 use rbs::{to_value, Value};
 use service::blog_service;
 use std::collections::HashMap;
@@ -22,7 +22,7 @@ pub async fn blogs(params: Query<PageRequest>) -> impl Responder {
         .insert_header(header::ContentType(mime::APPLICATION_JSON))
         .json(result)
 }
-
+#[routes]
 #[get("/blog")]
 pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
@@ -42,7 +42,7 @@ pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
         .insert_header(header::ContentType(mime::APPLICATION_JSON))
         .json(result)
 }
-
+#[routes]
 #[get("/category")]
 pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
@@ -69,7 +69,7 @@ pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder 
         .insert_header(header::ContentType(mime::APPLICATION_JSON))
         .json(result)
 }
-
+#[routes]
 #[get("/tag")]
 pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
@@ -100,6 +100,7 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
 /**
  * 检测Blog PassWrod 的正确性
  */
+#[routes]
 #[post("/checkBlogPassword")]
 pub async fn check_blog_password(data: Json<PageRequest>) -> impl Responder {
     if data.get_blog_id() > 0 {

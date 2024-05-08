@@ -9,7 +9,7 @@ use crate::models::vo::result::Result;
 
 use crate::service::{blog_service, category_service, site_setting_service, tag_service};
 use actix_web::http::header;
-use actix_web::{get, options, routes, HttpResponse, Responder};
+use actix_web::{routes, HttpResponse, Responder};
 use rbs::to_value;
 use rbs::Value;
 use std::collections::HashMap;
