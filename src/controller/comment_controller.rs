@@ -1,9 +1,8 @@
 /*
- * @Author: lurendie 549700459@qq.com
+ * @Author: lurendie
  * @Date: 2024-02-24 22:58:03
  * @LastEditors: lurendie
  * @LastEditTime: 2024-04-21 23:26:00
- * @FilePath: \zero_blog\src\controller\comment_controller.rs
  */
 use crate::models::vo::{page_request::PageRequest, result::Result};
 use crate::service::comments_service;

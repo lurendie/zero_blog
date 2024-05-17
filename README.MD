@@ -1,10 +1,4 @@
-<!--
- * @Author: lurendie 549700459@qq.com
- * @Date: 2024-03-26 00:08:12
- * @LastEditors: lurendie
- * @LastEditTime: 2024-04-22 21:40:03
- * @FilePath: \zero_blog\README.MD
--->
+
 # TODO 
  - 日志系统 [ 完成 ]
  - Rbatis or Mysql [ 完成 ]

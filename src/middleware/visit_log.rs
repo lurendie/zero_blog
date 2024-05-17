@@ -1,10 +1,10 @@
 /*
- * @Author: lurendie 549700459@qq.com
- * @Date: 2024-04-30 00:04:06
+* @Author: lurendie
+* @Date: 2024-04-30 00:04:06
  * @LastEditors: lurendie
- * @LastEditTime: 2024-05-07 00:12:58
- * @FilePath: \zero_blog\src\middleware\visit_log.rs
- */
+ * @LastEditTime: 2024-05-15 19:10:17
+
+*/
 use std::{
     future::{ready, Future, Ready},
     pin::Pin,
@@ -17,6 +17,7 @@ use actix_web::{
     http::header::{HeaderName, HeaderValue},
     Error,
 };
+use rbatis::rbatis_codegen::ops::AsProxy;
 /**
  * 校验访客标识码
  */
@@ -69,23 +70,28 @@ where
 
         Box::pin(async move {
             let mut res = fut.await?;
-            //1.检测访客标识码是否存在
-            let req_headers = res.request().headers();
-            let identification = req_headers.get("Identification");
-            if let Some(uuid) = identification {
-                log::info!("访客UUID:{:?}", uuid)
-            } else {
-                let resp = res.response_mut();
-                let resp_headers = resp.headers_mut();
-                //添加访客标识码UUID至响应头
-                resp_headers.insert(
-                    HeaderName::from_str("Identification").unwrap(),
-                    HeaderValue::from_str(Uuid::new_v4().to_string().as_str()).unwrap(),
-                );
-                resp_headers.insert(
-                    HeaderName::from_str("access-control-expose-headers").unwrap(),
-                    HeaderValue::from_str("Identification").unwrap(),
-                );
+            let uuid = Uuid::new_v4();
+            let uuid_str = uuid.to_string();
+            //如果不包含 admin
+            if !(res.request().uri().path().string().contains("admin")) {
+                //1.检测访客标识码是否存在
+                let req_headers = res.request().headers();
+                let identification = req_headers.get("Identification");
+                if let Some(uuid) = identification {
+                    log::info!("访客UUID:{:?}", uuid)
+                } else {
+                    let resp = res.response_mut();
+                    let resp_headers = resp.headers_mut();
+                    //添加访客标识码UUID至响应头
+                    resp_headers.insert(
+                        HeaderName::from_str("Identification").unwrap(),
+                        HeaderValue::from_str(uuid_str.as_str()).unwrap(),
+                    );
+                    resp_headers.insert(
+                        HeaderName::from_str("access-control-expose-headers").unwrap(),
+                        HeaderValue::from_str("Identification").unwrap(),
+                    );
+                }
             }
             Ok(res)
         })

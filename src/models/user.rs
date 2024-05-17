@@ -2,10 +2,10 @@ use rbatis::impl_select;
 use serde::{Deserialize, Serialize};
 
 /*
- * @Author: lurendie 549700459@qq.com
+ * @Author: lurendie 
  * @Date: 2024-02-24 22:58:03
  * @LastEditors: lurendie
- * @LastEditTime: 2024-05-06 23:42:14
+ * @LastEditTime: 2024-05-12 23:18:00
  */
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub(crate) struct User {
@@ -35,6 +35,10 @@ impl User {
 
     pub fn set_password(&mut self, pass: String) {
         self.password = pass
+    }
+
+    pub fn get_role(&self) -> String {
+        self.role.clone()
     }
 }
 

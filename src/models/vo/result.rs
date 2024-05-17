@@ -1,4 +1,15 @@
-use actix_web::{http::header, HttpResponse};
+use std::fmt::Debug;
+
+/*
+ * @Author: lurendie 549700459@qq.com
+ * @Date: 2024-02-24 22:58:03
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-05-14 19:27:50
+ */
+use actix_web::{
+    http::{header, StatusCode},
+    HttpResponse,
+};
 use rbs::Value;
 //封装响应结果
 use serde::{Deserialize, Serialize};
@@ -53,6 +64,13 @@ impl Result<Value> {
     pub fn error_json(&self) -> HttpResponse {
         HttpResponse::Ok()
             .insert_header(header::ContentType(mime::APPLICATION_JSON))
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
             .json(&self)
+    }
+}
+
+impl<T: Debug> std::fmt::Display for Result<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {},{:?})", self.code, self.msg, self.data)
     }
 }

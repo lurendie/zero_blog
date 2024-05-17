@@ -1,16 +1,16 @@
 /*
- * @Author: lurendie 549700459@qq.com
+ * @Author: lurendie
  * @Date: 2024-05-03 23:58:25
  * @LastEditors: lurendie
- * @LastEditTime: 2024-05-06 23:44:44
- * @FilePath: \zero_blog\src\controller\user_controller.rs
+ * @LastEditTime: 2024-05-16 13:14:29
+ *
  */
 
 use crate::models::Result;
 use crate::{middleware::AppClaims, service::user_service};
+use actix_jwt_session::JWT_COOKIE_NAME;
 use actix_jwt_session::{
-    Hashing, JwtTtl, OffsetDateTime, RefreshTtl, SessionStorage, Uuid, JWT_HEADER_NAME,
-    REFRESH_HEADER_NAME,
+    JwtTtl, OffsetDateTime, RefreshTtl, SessionStorage, Uuid, JWT_HEADER_NAME, REFRESH_HEADER_NAME,
 };
 use actix_web::{
     routes,
@@ -38,17 +38,17 @@ pub async fn login(
     //验证账号 密码是否正确
     let mut user = user_service::get_by_username(&user_form.username).await;
     if let Some(user) = user.as_mut() {
-        if user_form.password != user.get_password() {
+        if user_form.password != user.get_password() || user.get_role() != "ROLE_admin" {
             return HttpResponse::Unauthorized().finish();
         }
-        let store = store.into_inner();
-
+        let uuid = Uuid::new_v4();
+        //创建认证数据
         let claims = AppClaims {
             issues_at: OffsetDateTime::now_utc().unix_timestamp() as usize,
             subject: user.get_username(),
             expiration_time: jwt_ttl.0.as_seconds_f64() as u64,
             //audience: Audience::Web,
-            jwt_id: Uuid::new_v4(),
+            jwt_id: Uuid::parse_str(uuid.to_string().as_str()).unwrap(),
             account_id: user.get_id(),
             not_before: 0,
         };
@@ -57,6 +57,7 @@ pub async fn login(
             .store(claims, *jwt_ttl.into_inner(), *refresh_ttl.into_inner())
             .await
             .unwrap();
+
         let mut map: ValueMap = ValueMap::new();
         user.set_password("".to_string());
         map.insert(to_value!("user"), to_value!(user));
@@ -65,6 +66,10 @@ pub async fn login(
         return HttpResponse::Ok()
             .append_header((JWT_HEADER_NAME, pair.jwt.encode().unwrap()))
             .append_header((REFRESH_HEADER_NAME, pair.refresh.encode().unwrap()))
+            .cookie(
+                actix_web::cookie::Cookie::build(JWT_COOKIE_NAME, pair.jwt.encode().unwrap())
+                    .finish(),
+            )
             .json(result);
     }
     HttpResponse::Unauthorized().finish()

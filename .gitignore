@@ -5,4 +5,4 @@ Cargo.lock
 .vscode
 nblog.code-workspace
 Cargo.lock
-/conf
+/config
