@@ -4,12 +4,12 @@ appenders:
   stdout:
     kind: console
     encoder:
-      pattern: "{d} - {l} - {m}\n"
+      pattern: "{d} - {m}{n}\n"
   rolling:
     kind: rolling_file
     path: "logs/log.log"
     encoder:
-      pattern: "{d} - {l} - {m}\n"
+      pattern: "{d} - {m}{n}\n"
     policy:
       kind: compound
       trigger:
@@ -26,3 +26,13 @@ root:
   appenders:
     - rolling
     - stdout
+
+loggers:
+  app::backend::db:
+    level: info
+  app::requests:
+    level: info
+    appenders:
+    - rolling
+    - stdout
+    additive: false    

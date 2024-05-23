@@ -1,31 +1,35 @@
+/*
+ * @Author: lurendie 
+ * @Date: 2024-03-26 00:08:12
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-05-02 22:02:04
+ * @FilePath: \zero_blog\src\controller\index_controller.rs
+ */
 use crate::models::vo::result::Result;
 
 use crate::service::{blog_service, category_service, site_setting_service, tag_service};
 use actix_web::http::header;
-use actix_web::{get, HttpResponse, Responder};
-use log::error;
+use actix_web::{routes, HttpResponse, Responder};
 use rbs::to_value;
 use rbs::Value;
 use std::collections::HashMap;
 
-/*
-返回数据
- */
+/**
+   Site 数据
+*/
+#[routes]
 #[get("/site")]
+#[options("/site")]
 pub async fn site() -> impl Responder {
-    //获取redis缓存数据
     let mut map: HashMap<String, Value> = site_setting_service::get_site_info().await;
     let category_list = category_service::get_list().await;
     let random_list = blog_service::get_blog_list_random().await;
     let new_list = blog_service::get_blog_list_new().await;
     let tag_list = tag_service::get_tags().await;
-    map.insert("newBlogList".to_string(), to_value!(new_list.unwrap()));
+    map.insert("newBlogList".to_string(), to_value!(new_list));
     map.insert("categoryList".to_string(), to_value!(category_list));
-    map.insert("tagList".to_string(), to_value!(tag_list.unwrap()));
-    map.insert(
-        "randomBlogList".to_string(),
-        to_value!(random_list.unwrap_or_default()),
-    );
+    map.insert("tagList".to_string(), to_value!(tag_list));
+    map.insert("randomBlogList".to_string(), to_value!(random_list));
     let result: Result<HashMap<String, Value>> =
         Result::new(200, String::from("请求成功！"), Some(map));
     HttpResponse::Ok()
@@ -34,7 +38,7 @@ pub async fn site() -> impl Responder {
 }
 
 pub async fn default() -> impl Responder {
-    error!("404,找不到页面");
+    //error!("404,找不到页面");
     HttpResponse::Found()
         .content_type(mime::TEXT_HTML_UTF_8)
         .body("404,找不到页面")

@@ -1,5 +1,16 @@
-use actix_web::{http::header, HttpResponse};
-use rbs::value::map::ValueMap;
+use std::fmt::Debug;
+
+/*
+ * @Author: lurendie 549700459@qq.com
+ * @Date: 2024-02-24 22:58:03
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-05-14 19:27:50
+ */
+use actix_web::{
+    http::{header, StatusCode},
+    HttpResponse,
+};
+use rbs::Value;
 //封装响应结果
 use serde::{Deserialize, Serialize};
 
@@ -42,7 +53,7 @@ impl<T> Result<T> {
     }
 }
 //针对于ValueMap具体实现
-impl Result<ValueMap> {
+impl Result<Value> {
     //无异常返回
     pub fn ok_json(&self) -> HttpResponse {
         HttpResponse::Ok()
@@ -53,6 +64,13 @@ impl Result<ValueMap> {
     pub fn error_json(&self) -> HttpResponse {
         HttpResponse::Ok()
             .insert_header(header::ContentType(mime::APPLICATION_JSON))
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
             .json(&self)
+    }
+}
+
+impl<T: Debug> std::fmt::Display for Result<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {},{:?})", self.code, self.msg, self.data)
     }
 }

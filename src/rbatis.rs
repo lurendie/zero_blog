@@ -1,3 +1,10 @@
+/*
+ * @Author: lurendie
+ * @Date: 2024-02-24 22:58:03
+ * @LastEditors: lurendie
+ * @LastEditTime: 2024-04-21 00:29:02
+ * @FilePath: \zero_blog\src\rbatis.rs
+ */
 use std::sync::Arc;
 
 use crate::config;
@@ -18,7 +25,7 @@ pub static RBATIS: Lazy<RBatis> = Lazy::new(|| {
         .database(conf.mysql.data_base.as_str())
         .host(conf.mysql.host.as_str());
     let _ = &rbatis.init_option::<Driver, MySqlConnectOptions, DefaultPool>(Driver {}, opts);
-    log::debug!("数据库连接初始化完成！");
+    //log::info!("MySQL连接初始化完成！");
     rbatis.set_intercepts(vec![Arc::new(LogInterceptor::new(LevelFilter::Debug))]);
     rbatis
 });

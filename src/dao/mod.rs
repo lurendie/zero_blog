@@ -6,3 +6,4 @@ pub mod comment_dao;
 pub mod friend_dao;
 pub mod moment_dao;
 pub mod tag_dao;
+pub mod user_dao;

@@ -1,3 +1,5 @@
+use crate::constant::blog_info_constants;
+use crate::constant::redis_key_constants;
 use crate::dao::blog_dao;
 use crate::dao::blog_dao::{
     get_blog_list, get_blog_list_by_is_published as get_blog_public, get_by_category,
@@ -5,6 +7,7 @@ use crate::dao::blog_dao::{
 };
 use crate::dao::{category_dao, tag_dao};
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
+use crate::service::redis_service;
 use rand::Rng;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
@@ -12,99 +15,178 @@ use rbs::value::map::ValueMap;
 use rbs::Value;
 use std::collections::HashMap;
 
-//随机博客显示5条
-const RANDOM_BLOG_LIMIT_NUM: u8 = 5;
-//最新推荐博客显示3条
-const NEW_BLOG_PAGE_SIZE: u8 = 3;
-//每页显示5条博客简介
-const PAGE_SIZE: u64 = 5;
-//const ORDER_BY: &str = "is_top desc, create_time desc";
-
-const _PRIVATE_BLOG_DESCRIPTION: &str = "此文章受密码保护！";
-
 pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> HashMap<String, Value> {
+    //println!("{:?}", page_num);
+    let num;
+    if page_num.unwrap() == 0 {
+        num = 1;
+    } else {
+        num = page_num.unwrap();
+    }
+    //1.查询redis缓存
+    let redis_cache = redis_service::get_hash_key(
+        redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
+        num.to_string(),
+    )
+    .await;
+    //2.缓存不未Null则返回返回
+    if let Some(redis_cache) = redis_cache {
+        log::info!(
+            "key:{} page:{} 数据存在",
+            redis_key_constants::HOME_BLOG_INFO_LIST,
+            num
+        );
+        return redis_cache;
+    }
+    //3.查询数据库
     let mut map: HashMap<String, Value> = HashMap::new();
     let page_list: Page<BlogInfo>;
-    if page_num.is_none() {
-        page_list = match get_blog_public(1, PAGE_SIZE).await {
-            Ok(mut ok) => {
-                bloginfo_handle(ok.get_records_mut()).await;
-                ok
-            }
-            Err(e) => {
-                log::error!("BlogList查询失败:{:?}", e);
-                Page::new(0, 0)
-            }
-        };
-    } else {
-        page_list = match get_blog_public(page_num.expect("异常！"), PAGE_SIZE).await {
-            Ok(mut ok) => {
-                bloginfo_handle(ok.get_records_mut()).await;
-                ok
-            }
-            Err(e) => {
-                log::error!("BlogList查询失败:{:?}", e);
-                Page::new(0, 0)
-            }
+    page_list = match get_blog_public(num, blog_info_constants::PAGE_SIZE).await {
+        Ok(mut ok) => {
+            bloginfo_handle(ok.get_records_mut()).await;
+            ok
         }
-    }
+        Err(e) => {
+            log::error!("BlogList查询失败:{:?}", e);
+            Page::new(0, 0)
+        }
+    };
     map.insert("list".to_string(), to_value!(page_list.get_records()));
     map.insert("totalPage".to_string(), to_value!(page_list.pages()));
+    //4.如果数据库查询不是Null 存放到Redis中
+    log::info!(
+        "key:{} page:{} 数据不存在",
+        redis_key_constants::HOME_BLOG_INFO_LIST,
+        num
+    );
+    if !page_list.get_records().is_empty() {
+        let _ = redis_service::set_hash_key(
+            redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
+            num.to_string(),
+            &map,
+        )
+        .await;
+    }
     map
 }
-//随机文章
-pub async fn get_blog_list_random() -> Result<Vec<BlogInfo>, rbatis::Error> {
+///随机文章
+pub async fn get_blog_list_random() -> Vec<Value> {
+    //1.查询Redis 缓存数据
+    let redis_cache =
+        redis_service::get_value_vec(redis_key_constants::RANDOM_BLOG_LIST.to_string()).await;
+    if let Some(redis_cache) = redis_cache {
+        let arr = match redis_cache {
+            Value::Array(arr) => {
+                log::error!(
+                    "key:{} 数据存在",
+                    redis_key_constants::RANDOM_BLOG_LIST.to_string()
+                );
+                arr
+            }
+            _ => vec![],
+        };
+        return arr;
+    }
+    //2.查询数据库
     match get_blog_list().await {
         Ok(mut list) => {
             bloginfo_handle(&mut list).await;
+            let mut result = vec![];
             //计数
             let mut count = 0;
             let mut rng = rand::thread_rng();
-            Ok(list
+            let _ = list
                 .clone()
                 .into_iter()
                 .filter(|_| {
                     //随机RANDOM_BLOG_LIMIT_NUM次,超过则不在进行添加的
-                    if count < RANDOM_BLOG_LIMIT_NUM {
+                    if count < blog_info_constants::RANDOM_BLOG_LIMIT_NUM {
                         count += 1;
                         list[rng.gen_range(1..list.len())].id.expect("异常") as usize > 0
                     } else {
                         false
                     }
                 })
-                .collect())
+                .collect::<Vec<_>>()
+                .iter()
+                .for_each(|item| {
+                    result.push(to_value!(item));
+                });
+            log::info!(
+                "key:{} 数据不存在",
+                redis_key_constants::RANDOM_BLOG_LIST.to_string()
+            );
+            //保存到Redis
+            redis_service::set_value_vec(
+                redis_key_constants::RANDOM_BLOG_LIST.to_string(),
+                &to_value!(&result),
+            )
+            .await;
+            return result;
         }
         Err(e) => {
             log::error!("{}", e);
-            Err(e)
+            vec![]
         }
     }
 }
 
 //newBlog
-pub async fn get_blog_list_new() -> Result<Vec<BlogInfo>, rbatis::Error> {
+pub async fn get_blog_list_new() -> Vec<Value> {
+    //1.查询Redis 缓存数据
+    let redis_cache =
+        redis_service::get_value_vec(redis_key_constants::NEW_BLOG_LIST.to_string()).await;
+    if let Some(redis_cache) = redis_cache {
+        let arr = match redis_cache {
+            Value::Array(arr) => {
+                log::error!(
+                    "key:{} 数据存在",
+                    redis_key_constants::NEW_BLOG_LIST.to_string()
+                );
+                arr
+            }
+            _ => vec![],
+        };
+        return arr;
+    }
+    //2.查询数据库
     match get_blog_list().await {
         Ok(mut list) => {
             bloginfo_handle(&mut list).await;
+            let mut result = vec![];
             //计数
             let mut count = 0;
-            Ok(list
-                .clone()
+            list.clone()
                 .into_iter()
                 .filter(|_| {
                     //NEW_BLOG_PAGE_SIZE,超过则不在进行添加的
-                    if count < NEW_BLOG_PAGE_SIZE {
+                    if count < blog_info_constants::NEW_BLOG_PAGE_SIZE {
                         count += 1;
                         true
                     } else {
                         false
                     }
                 })
-                .collect())
+                .collect::<Vec<_>>()
+                .iter()
+                .for_each(|item| {
+                    result.push(to_value!(item));
+                });
+            log::info!(
+                "key:{} 数据不存在",
+                redis_key_constants::NEW_BLOG_LIST.to_string()
+            );
+            //保存到Redis
+            redis_service::set_value_vec(
+                redis_key_constants::NEW_BLOG_LIST.to_string(),
+                &to_value!(&result),
+            )
+            .await;
+            result
         }
         Err(e) => {
             log::error!("{}", e.to_string());
-            Err(e)
+            vec![]
         }
     }
 }
@@ -113,7 +195,7 @@ pub async fn get_blog_list_new() -> Result<Vec<BlogInfo>, rbatis::Error> {
 pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value> {
     let mut map: HashMap<String, Value> = HashMap::new();
     let mut page_list: Page<BlogInfo>;
-    page_list = match get_by_category(name, page_num, PAGE_SIZE).await {
+    page_list = match get_by_category(name, page_num, blog_info_constants::PAGE_SIZE).await {
         Ok(mut ok) => {
             bloginfo_handle(ok.get_records_mut()).await;
             ok
@@ -142,7 +224,7 @@ pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
 pub async fn get_by_tag_name(name: String, page_num: usize) -> HashMap<String, Value> {
     let mut map: HashMap<String, Value> = HashMap::new();
     let mut page_list: Page<BlogInfo>;
-    page_list = match get_by_tag(name, page_num, PAGE_SIZE).await {
+    page_list = match get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await {
         Ok(mut ok) => {
             bloginfo_handle(ok.get_records_mut()).await;
             ok
@@ -213,8 +295,11 @@ async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
     for item in list.iter_mut() {
         let id = item.id.unwrap();
         item.category = Some(category_dao::get_by_bloginfo_id(id).await.unwrap());
-        if item.password.is_none() {
-            item.privacy = Some(true);
+        if let Some(password) = &item.password {
+            //如果password!=null
+            if *password != "" {
+                item.privacy = Some(true);
+            }
         } else {
             item.privacy = Some(false)
         }
