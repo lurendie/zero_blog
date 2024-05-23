@@ -25,3 +25,10 @@ pub(crate) async fn get_all_comments(blog_id: u16) -> String {
 pub(crate) async fn get_close_comments(blog_id: u16) -> String {
     comment_dao::get_close_comments(blog_id).await.to_string()
 }
+
+/**
+ * 获取评论的总数
+ */
+ pub async fn get_comment_count()->i32{
+    comment_dao::get_comment_count().await
+ }

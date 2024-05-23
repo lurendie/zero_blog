@@ -27,7 +27,6 @@ pub(crate) async fn get_comments(parent_comment_id: u16) -> Result<Vec<Comment>,
         .query_decode::<Vec<Comment>>(sql, vec![parent_comment_id.into()])
         .await;
 
-    // //todo 方法:使用递归函数已实现深沉递归,性能怪兽
     let mut futures = Vec::new();
 
     for item in page.as_ref().unwrap().iter() {
@@ -50,7 +49,9 @@ pub(crate) async fn get_comments(parent_comment_id: u16) -> Result<Vec<Comment>,
     }
     Ok(reply_comments)
 }
-
+/**
+ * 根据BlogId 获取某一个博文的评论
+ */
 pub(crate) async fn get_all_comments(blog_id: u16) -> usize {
     Comment::select_all_comment(
         &RBATIS.acquire().await.unwrap(),
@@ -64,6 +65,9 @@ pub(crate) async fn get_all_comments(blog_id: u16) -> usize {
     .len()
 }
 
+/**
+ * 根据BlogId 获取某一个博文的评论
+ */
 pub(crate) async fn get_close_comments(blog_id: u16) -> usize {
     Comment::select_close_comment(
         &RBATIS.acquire().await.unwrap(),
@@ -82,4 +86,12 @@ pub(crate) async fn get_comment_nickname(id: i16) -> Result<String, Error> {
     let sql = "select nickname from comment where id = ?";
     let query_data = RBATIS.query_decode::<String>(sql, vec![id.into()]).await;
     query_data
+}
+
+pub(crate) async fn get_comment_count() -> i32 {
+    let sql = "select count(id) from comment";
+    RBATIS
+        .query_decode::<i32>(sql, vec![])
+        .await
+        .unwrap_or_else(|_| 0)
 }
