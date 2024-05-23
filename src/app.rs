@@ -2,15 +2,13 @@
  * @Author: lurendie 549700459@qq.com
  * @Date: 2024-03-26 00:08:12
  * @LastEditors: lurendie
- * @LastEditTime: 2024-05-17 08:46:24
  */
 use crate::config::Config;
-use crate::controller::admin::index_controller as adminIndexController;
 use crate::controller::{
     about_controller, admin, archive_controller, blog_controller, comment_controller,
     friend_controller, index_controller, moment_controller, user_controller,
 };
-use crate::middleware::{create, AppClaims, VisiLog};
+use crate::middleware::{AppClaims, VisiLog, JWT};
 use actix_cors::Cors;
 use actix_jwt_session::{Duration, JwtTtl, RefreshTtl};
 use actix_web::http::header::{
@@ -24,18 +22,18 @@ use actix_web::{http::header::HeaderName, web, App, HttpServer};
 use std::str::FromStr;
 pub struct AppServer;
 /**
- * 服务启动
- * return io
+ * Application
+ *
  */
 impl AppServer {
     /**
-     *
+     * run 服务启动
      */
     pub async fn run(conf: &'static Config) -> std::io::Result<()> {
-        let (storage, factory) = create::<AppClaims>();
+        let (storage, factory) = JWT::create::<AppClaims>();
         //创建JWT
-        let jwt_ttl = JwtTtl(Duration::days(14));
-        let refresh_ttl = RefreshTtl(Duration::days(3 * 31));
+        let jwt_ttl = JwtTtl(Duration::days(1));
+        let refresh_ttl = RefreshTtl(Duration::days(1));
         HttpServer::new(move || {
             // 配置 CORS
             let cors = Cors::default()
@@ -82,8 +80,7 @@ impl AppServer {
                         .app_data(Data::new(storage.clone()))
                         .wrap(factory.clone())
                         .service(user_controller::login)
-                        .service(admin::dashboard_controller::dashboard)
-                        .default_service(web::to(adminIndexController::default)),
+                        .service(admin::dashboard_controller::dashboard), //.default_service(web::to(adminIndexController::default)),
                 )
                 .default_service(web::to(index_controller::default))
         })
