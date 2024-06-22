@@ -7,5 +7,5 @@
  */
 mod jwt;
 mod visit_log;
-pub use jwt::{create, AppClaims};
+pub use jwt::{JWT, AppClaims};
 pub use visit_log::VisiLog;

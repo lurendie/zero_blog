@@ -257,7 +257,6 @@ pub(crate) async fn get_archives() -> ValueMap {
         .map(|itme| date_times.push(itme.create_time.format("YYYY-MM")))
         .collect::<Vec<_>>();
     //通过日期获取文章
-    //todo!("！！！！未完成");
     for item in date_times.iter_mut() {
         let mut itme_map: Vec<BlogArchive> = vec![];
 
@@ -312,16 +311,21 @@ async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
     }
 }
 
+/**
+ * count Blogs
+ */
+pub async fn get_blog_count() -> i32 {
+    blog_dao::get_blog_count().await.unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use rbatis::rbdc::DateTime;
 
     #[test]
     pub(crate) fn test_datetime() {
-        let time = DateTime::now()
-            .format("YYYY-MM-DD hh:mm:ss")
-            .parse::<DateTime>()
-            .unwrap();
+        let time = DateTime::now().format("YYYY-MM-DD hh:mm:ss");
         println!("{:?}", time)
+        //stdout "2024-05-18 12:46:22"
     }
 }

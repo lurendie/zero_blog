@@ -9,3 +9,4 @@ pub(crate) mod friend_info;
 pub mod introduction;
 pub mod page_request;
 pub mod result;
+pub mod serise;

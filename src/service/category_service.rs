@@ -1,15 +1,20 @@
 /*
- * @Author: lurendie 
+ * @Author: lurendie
  * @Date: 2024-02-24 22:58:03
  * @LastEditors: lurendie
  * @LastEditTime: 2024-04-19 23:46:51
  * @FilePath: \zero_blog\src\service\category_service.rs
  */
 
+use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
 use crate::constant::redis_key_constants;
-use crate::dao::category_dao::get_list as getList;
+use crate::dao::{
+    blog_dao,
+    category_dao::{self, get_list as getList},
+};
+use crate::models::vo::serise::Series;
 use crate::service::redis_service;
 /**
  * 查询所有分类
@@ -49,4 +54,26 @@ pub async fn get_list() -> Vec<Value> {
     )
     .await;
     result
+}
+
+/**
+ * 查询分类名称
+ */
+pub async fn get_categorys_count() -> ValueMap {
+    let mut map = ValueMap::new();
+    let mut legend = vec![];
+    let mut series = vec![];
+
+    for item in category_dao::get_list().await {
+        legend.push(to_value!(item.name.clone()));
+        let series_item = Series::new(
+            item.id,
+            item.name.clone(),
+            blog_dao::get_category_count(item.name).await,
+        );
+        series.push(series_item);
+    }
+    map.insert(to_value!("legend"), to_value!(legend));
+    map.insert(to_value!("series"), to_value!(series));
+    map
 }

@@ -1,9 +1,8 @@
 /*
- * @Author: lurendie 
+ * @Author: lurendie
  * @Date: 2024-02-24 22:58:03
  * @LastEditors: lurendie
- * @LastEditTime: 2024-04-26 00:06:44
- * @FilePath: \zero_blog\src\config.rs
+ * @LastEditTime: 2024-05-17 12:18:04
  */
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};

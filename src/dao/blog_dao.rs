@@ -11,7 +11,7 @@ pub async fn get_blog_list_by_is_published(
     page_num: u64,
     page_size: u64,
 ) -> Result<Page<BlogInfo>, rbatis::Error> {
-    let  page = BlogInfo::select_page(
+    let page = BlogInfo::select_page(
         &RBATIS.acquire().await.expect("异常"),
         &PageRequest::new(page_num, page_size),
     )
@@ -36,7 +36,24 @@ pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
             log::error!("{e}");
             vec![]
         });
-    
+
+    Ok(blog_info)
+}
+
+pub async fn get_blog_count() -> Result<i32, rbatis::Error> {
+    let sql = "
+        select
+             count(blog.id)
+         from
+             blog";
+    let blog_info = RBATIS
+        .query_decode::<i32>(&sql, vec![])
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("{e}");
+            0
+        });
+
     Ok(blog_info)
 }
 
@@ -107,11 +124,7 @@ pub async fn get_by_tag(
     let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
     let tag = tag_query.unwrap_or_else(|e| {
         println!("{:?}", e);
-        Tag {
-            id: Some(0),
-            name: "未知".to_string(),
-            color: "#000000".to_string(),
-        }
+        Tag::default()
     });
     let sql = "select 
     blog.*
@@ -190,6 +203,56 @@ pub(crate) async fn get_archives_count() -> Result<u64, Error> {
     Ok(count)
 }
 
+/**
+ * 查询分类下所有文章的数量
+ */
+pub async fn get_category_count(name: String) -> i32 {
+    let sql = "SELECT count(*)
+    FROM blog,category
+    WHERE blog.category_id=category.id and category.category_name= ?;";
+    RBATIS
+        .query_decode(sql, vec![to_value!(name)])
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("{}", e);
+            0
+        })
+}
+
+/**
+ * 查询标签下所有文章的数量
+ */
+pub async fn get_tags_count(name: String) -> i32 {
+    //1.查询标签对象
+    let sql = format!(
+        "
+    select
+    id,tag_name as name,color
+    from
+    tag
+     where tag_name = \"{}\"
+ ",
+        name
+    );
+    let args = vec![];
+    let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
+    let tag = tag_query.unwrap_or_else(|e| {
+        println!("{:?}", e);
+        Tag::default()
+    });
+    let sql = "select 
+    count(blog.id)
+    from blog,blog_tag where blog.id=blog_tag.blog_id and blog_tag.tag_id= ?";
+
+    RBATIS
+        .query_decode(sql, vec![to_value!(tag.id.unwrap_or_default())])
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("{}", e);
+            0
+        })
+}
+
 #[cfg(test)]
 mod test {
     use rbatis::rbdc::DateTime;
@@ -210,11 +273,10 @@ mod test {
 
     #[test]
     fn test_format() {
-        let date = DateTime::now().format("YYYY-MM-DD");
+        let mut date = DateTime::now().format("YYYY-MM-DD");
         println!("{}", date);
-        let mut date_time = String::from("2021-12");
-        date_time.insert(4, '年');
-        date_time.insert(10, '日');
-        println!("{}", date_time);
+        date.insert(4, '年');
+        date.insert(10, '日');
+        println!("{}", date);
     }
 }
