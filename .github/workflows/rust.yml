@@ -12,11 +12,11 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: x86_64-unknown-linux-gnu
 
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose
+      run: cargo build -r
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test -r
