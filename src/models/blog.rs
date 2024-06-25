@@ -52,3 +52,7 @@ impl_select_page!(Blog{select_page_by_name(name:&str) =>"
        `where name != #{name}`
      if name == '':
        `where name != ''`"});
+
+impl_select_page!(Blog{select_page_blog_all(title:&str) =>"where 1=1
+if !title.is_empty():
+   `and title like #{title}`"});

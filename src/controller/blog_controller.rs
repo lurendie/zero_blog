@@ -1,4 +1,4 @@
-use crate::models::vo::page_request::PageRequest;
+use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::result::Result;
 use crate::service;
 use actix_web::http::header;
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 #[routes]
 #[options("/site")]
 #[get("/blogs")]
-pub async fn blogs(params: Query<PageRequest>) -> impl Responder {
+pub async fn blogs(params: Query<SearchRequest>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
     let page =
         blog_service::get_blog_list_by_is_published(Some(params.get_page_num() as u64)).await;
@@ -108,7 +108,7 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
  */
 #[routes]
 #[post("/checkBlogPassword")]
-pub async fn check_blog_password(data: Json<PageRequest>) -> impl Responder {
+pub async fn check_blog_password(data: Json<SearchRequest>) -> impl Responder {
     if data.get_blog_id() > 0 {
         let blog_info = blog_service::get_by_id(data.get_blog_id()).await;
         if let Some(blog_info) = &blog_info {

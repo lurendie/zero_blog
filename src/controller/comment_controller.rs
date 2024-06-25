@@ -4,7 +4,7 @@
  * @LastEditors: lurendie
  * @LastEditTime: 2024-04-21 23:26:00
  */
-use crate::models::vo::{page_request::PageRequest, result::Result};
+use crate::models::vo::{page_request::SearchRequest, result::Result};
 use crate::service::comments_service;
 use actix_web::web::Query;
 use actix_web::{get, Responder};
@@ -13,7 +13,7 @@ use rbs::to_value;
 use rbs::value::map::ValueMap;
 
 #[get("/comments")]
-pub(crate) async fn get_comments(data: Option<Query<PageRequest>>) -> impl Responder {
+pub(crate) async fn get_comments(data: Option<Query<SearchRequest>>) -> impl Responder {
     //println!("page:{:?}", data);
     if data.is_none() {
         return Result::error("获取数据失败!".to_string()).error_json();

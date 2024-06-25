@@ -1,5 +1,5 @@
 /*
- * @Author: lurendie 
+ * @Author: lurendie
  * @Date: 2024-04-06 09:12:34
  * @LastEditors: lurendie
  * @LastEditTime: 2024-04-23 22:57:39
@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Default, Serialize, Clone, Debug)]
-pub struct PageRequest {
+pub struct SearchRequest {
     #[serde(rename = "pageNum")]
     page_num: Option<u16>,
     #[serde(rename = "pageSize")]
@@ -19,9 +19,11 @@ pub struct PageRequest {
     blog_id: Option<u16>,
     #[serde(rename = "password")]
     password: Option<String>,
+    #[serde(rename = "title")]
+    title: Option<String>,
 }
 
-impl PageRequest {
+impl SearchRequest {
     pub fn get_page_num(&self) -> u16 {
         self.page_num.unwrap_or_default()
     }
@@ -36,5 +38,8 @@ impl PageRequest {
     }
     pub fn get_password(&self) -> String {
         self.password.clone().unwrap_or_default()
+    }
+    pub fn get_title(&self) -> String {
+        self.title.clone().unwrap_or_default()
     }
 }

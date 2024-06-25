@@ -1,3 +1,5 @@
+use crate::models::blog::Blog;
+use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::models::{category::Category, tag::Tag};
 use crate::rbatis::RBATIS;
@@ -6,8 +8,8 @@ use rbatis::{Error, Page, PageRequest};
 use rbs::to_value;
 use serde::{Deserialize, Serialize};
 
-// 获取公开的博文
-pub async fn get_blog_list_by_is_published(
+// 获取公开的分页博文
+pub async fn get_blog_pages(
     page_num: u64,
     page_size: u64,
 ) -> Result<Page<BlogInfo>, rbatis::Error> {
@@ -22,7 +24,9 @@ pub async fn get_blog_list_by_is_published(
     });
     Ok(page)
 }
-
+/**
+ * 获取公开的博文(不分页)
+ */
 pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
     let sql = "
         select
@@ -39,7 +43,7 @@ pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
 
     Ok(blog_info)
 }
-
+//查询所有博文数量(全部)
 pub async fn get_blog_count() -> Result<i32, rbatis::Error> {
     let sql = "
         select
@@ -57,7 +61,7 @@ pub async fn get_blog_count() -> Result<i32, rbatis::Error> {
     Ok(blog_info)
 }
 
-//根据名称查询该分类博文
+//根据名称查询该分类博文(分页)
 pub async fn get_by_category(
     name: String,
     page_num: usize,
@@ -104,7 +108,7 @@ pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
     })
 }
 
-//根据标签名称查询该分类博文
+//根据标签名称查询该分类博文(分页)
 pub async fn get_by_tag(
     name: String,
     page_num: usize,
@@ -251,6 +255,21 @@ pub async fn get_tags_count(name: String) -> i32 {
             log::error!("{}", e);
             0
         })
+}
+/**
+ * 获取全部博文并分页返回，支持按标题模糊查询
+ */
+pub(crate) async fn get_blog_all_page(page: &SearchRequest) -> Page<Blog> {
+    Blog::select_page_blog_all(
+        &RBATIS.acquire().await.unwrap(),
+        &PageRequest::new(page.get_page_num() as u64, page.get_page_size() as u64),
+        page.get_title().as_str(),
+    )
+    .await
+    .unwrap_or_else(|e| {
+        log::error!("{}", e);
+        Page::default()
+    })
 }
 
 #[cfg(test)]

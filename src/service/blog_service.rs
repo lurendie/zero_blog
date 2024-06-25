@@ -2,10 +2,12 @@ use crate::constant::blog_info_constants;
 use crate::constant::redis_key_constants;
 use crate::dao::blog_dao;
 use crate::dao::blog_dao::{
-    get_blog_list, get_blog_list_by_is_published as get_blog_public, get_by_category,
-    get_by_id as getById, get_by_tag,
+    get_blog_list, get_blog_pages as get_blog_public, get_by_category, get_by_id as getById,
+    get_by_tag,
 };
 use crate::dao::{category_dao, tag_dao};
+use crate::models::blog::Blog;
+use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::service::redis_service;
 use rand::Rng;
@@ -315,7 +317,14 @@ async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
  * count Blogs
  */
 pub async fn get_blog_count() -> i32 {
-    blog_dao::get_blog_count().await.unwrap()
+    blog_dao::get_blog_count().await.unwrap_or_default()
+}
+
+/**
+ * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。
+ */
+pub async fn get_blog_all_page(page: &SearchRequest) ->Page<Blog> {
+    blog_dao::get_blog_all_page(page).await
 }
 
 #[cfg(test)]
