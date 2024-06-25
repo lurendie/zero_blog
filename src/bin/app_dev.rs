@@ -1,5 +1,5 @@
 //配置项
-use nblog::{app::AppServer, config, log4rs};
+use zero_blog::{app::AppServer, config, log4rs};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

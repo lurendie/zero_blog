@@ -14,6 +14,7 @@ use crate::dao::{
     blog_dao,
     category_dao::{self, get_list as getList},
 };
+use crate::models::vo::categorie::Categorie;
 use crate::models::vo::serise::Series;
 use crate::service::redis_service;
 /**
@@ -76,4 +77,16 @@ pub async fn get_categorys_count() -> ValueMap {
     map.insert(to_value!("legend"), to_value!(legend));
     map.insert(to_value!("series"), to_value!(series));
     map
+}
+
+pub(crate) async fn get_categories() -> Vec<Categorie> {
+    let mut list = vec![];
+    category_dao::get_list().await.iter().for_each(|item| {
+        list.push(Categorie::new(
+            Some(item.id.clone()),
+            item.name.clone(),
+            vec![],
+        ))
+    });
+    list
 }

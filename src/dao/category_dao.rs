@@ -1,3 +1,5 @@
+use rbs::to_value;
+
 use crate::models::category::Category;
 use crate::rbatis::RBATIS;
 
@@ -31,6 +33,17 @@ pub async fn get_by_bloginfo_id(id: u16) -> Result<Category, rbatis::rbdc::Error
         id
     );
     let args = vec![];
+    let category = RBATIS.query_decode::<Category>(&sql, args).await;
+    category
+}
+
+/**
+ * 根据分类ID查询分类信息
+ */
+pub async fn get_by_id(id: u16) -> Result<Category, rbatis::rbdc::Error> {
+    let sql = "select id,category_name as name from category where id = ?";
+    let args = vec![to_value!(id)];
+    
     let category = RBATIS.query_decode::<Category>(&sql, args).await;
     category
 }

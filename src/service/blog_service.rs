@@ -6,7 +6,6 @@ use crate::dao::blog_dao::{
     get_by_tag,
 };
 use crate::dao::{category_dao, tag_dao};
-use crate::models::blog::Blog;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::service::redis_service;
@@ -323,8 +322,19 @@ pub async fn get_blog_count() -> i32 {
 /**
  * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。
  */
-pub async fn get_blog_all_page(page: &SearchRequest) ->Page<Blog> {
-    blog_dao::get_blog_all_page(page).await
+pub async fn get_blog_all_page(page: &SearchRequest) -> ValueMap {
+    let mut map: ValueMap = ValueMap::new();
+    let mut page_list = blog_dao::get_blog_all_page(page).await;
+    for item in page_list.get_records_mut() {
+        item.category = Some(category_dao::get_by_id(item.category_id).await.unwrap())
+    }
+    map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
+    map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
+    map.insert(to_value!("pageSize"), to_value!(page_list.page_size()));
+    map.insert(to_value!("pages"), to_value!(page_list.pages()));
+    map.insert(to_value!("total"), to_value!(page_list.total()));
+    map.insert(to_value!("list"), to_value!(page_list.get_records()));
+    map
 }
 
 #[cfg(test)]
