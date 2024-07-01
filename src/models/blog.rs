@@ -1,9 +1,9 @@
 use rbatis::rbdc::datetime::DateTime;
-use rbatis::{crud, impl_select_page};
+use rbatis::{crud, impl_select, impl_select_page};
 use serde::de::Unexpected;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::dao::category_dao;
+use crate::dao::CategoryDao;
 
 use super::category::Category;
 
@@ -33,9 +33,10 @@ pub struct Blog {
     is_top: bool,
     password: Option<String>,
     user_id: u16,
-    #[serde(rename(deserialize = "category_id"),skip_serializing)] //跳过该字段，不进行序列化操作。
+    #[serde(rename(deserialize = "category_id"), skip_serializing)]
+    //跳过该字段，不进行序列化操作。
     pub(crate) category_id: u16,
-    #[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
+    //#[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
     pub(crate) category: Option<Category>,
 }
 
@@ -66,13 +67,15 @@ impl_select_page!(Blog{select_page_blog_all(title:&str) =>"where 1=1
 if !title.is_empty():
    `and title like #{title}`"});
 
+impl_select!(Blog{get_blog(id:&str)=>"`where blog.id = #{id}`"});
+
 // // id 类型转 category
 fn _category_from_id<'de, D>(deserializer: D) -> Result<Option<Category>, D::Error>
 where
     D: Deserializer<'de>,
 {
     if let Ok(id) = u16::deserialize(deserializer) {
-        let fut = category_dao::get_by_id(id as u16);
+        let fut = CategoryDao::get_by_id(id as u16);
         let _v = Box::pin(async { Some(fut.await.unwrap()) });
         return Ok(None);
     }

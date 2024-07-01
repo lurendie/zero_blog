@@ -2,7 +2,7 @@ use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
 use crate::constant::redis_key_constants;
-use crate::dao::blog_dao;
+use crate::dao::BlogDao;
 /*
  * @Author: lurendie
  * @Date: 2024-02-24 22:58:03
@@ -10,16 +10,16 @@ use crate::dao::blog_dao;
  * @LastEditTime: 2024-04-21 00:15:16
  * @FilePath: \zero_blog\src\service\tag_service.rs
  */
-use crate::dao::tag_dao::{self, get_list};
+use crate::dao::TagDao;
 use crate::models::vo::serise::Series;
 
-use super::redis_service;
+use super::RedisService;
 
 pub async fn get_tags() -> Vec<Value> {
     let mut result = vec![];
     //1.查询redis缓存
     let redis_cache =
-        redis_service::get_value_vec(redis_key_constants::TAG_CLOUD_LIST.to_string()).await;
+        RedisService::get_value_vec(redis_key_constants::TAG_CLOUD_LIST.to_string()).await;
     if let Some(redis_cache) = redis_cache {
         let arr = match redis_cache {
             Value::Array(arr) => {
@@ -34,14 +34,14 @@ pub async fn get_tags() -> Vec<Value> {
         return arr;
     }
     //2.查询数据库
-    get_list()
+    TagDao::get_list()
         .await
         .unwrap_or_default()
         .iter()
         .for_each(|item| result.push(to_value!(item)));
 
     //保存到Redis
-    redis_service::set_value_vec(
+    RedisService::set_value_vec(
         redis_key_constants::TAG_CLOUD_LIST.to_string(),
         &to_value!(&result),
     )
@@ -54,12 +54,12 @@ pub(crate) async fn get_tags_count() -> rbs::value::map::ValueMap {
     let mut legend = vec![];
     let mut series = vec![];
 
-    for item in tag_dao::get_list().await.unwrap() {
+    for item in TagDao::get_list().await.unwrap() {
         legend.push(to_value!(item.name.clone()));
         let series_item = Series::new(
             item.id.unwrap(),
             item.name.clone(),
-            blog_dao::get_tags_count(item.name).await,
+            BlogDao::get_tags_count(item.name).await,
         );
         series.push(series_item);
     }

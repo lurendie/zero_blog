@@ -3,7 +3,7 @@ use rbatis::{crud, impl_select, impl_select_page};
 use serde::de::Unexpected;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::dao::category_dao;
+use crate::dao::CategoryDao;
 use crate::models::category::Category;
 //博客详情信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -27,7 +27,7 @@ pub struct BlogDetail {
     pub(crate) read_time: u16,
     #[serde(deserialize_with = "bool_from_int")]
     pub(crate) is_top: bool,
-   
+
     pub(crate) password: Option<String>,
 }
 
@@ -58,7 +58,7 @@ where
     D: Deserializer<'de>,
 {
     if let Ok(id) = u16::deserialize(deserializer) {
-        let fut = category_dao::get_by_id(id as u16);
+        let fut = CategoryDao::get_by_id(id as u16);
         println!("id: {:?}", id);
         // let category = category_dao::get_by_id(id as u16).await.unwrap();
         // let mut category = Category::default();

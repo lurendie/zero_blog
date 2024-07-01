@@ -2,7 +2,7 @@ use crate::constant::redis_key_constants;
 use crate::constant::site_setting_constants;
 use crate::dao;
 use crate::models::vo::{badge::Badge, copyright::Copyright, favorite::Favorite, introduction};
-use crate::service::redis_service;
+use crate::service::RedisService;
 use rbs::to_value;
 use rbs::Value;
 use std::collections::HashMap;
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 pub async fn get_site_info() -> HashMap<String, Value> {
     //查询缓存
     let cache_result =
-        redis_service::get_value_map(redis_key_constants::SITE_INFO_MAP.to_string()).await;
+        RedisService::get_value_map(redis_key_constants::SITE_INFO_MAP.to_string()).await;
     if let Some(cache_result) = cache_result {
         log::info!("key:{}数据存在", redis_key_constants::SITE_INFO_MAP);
         return cache_result;
@@ -72,6 +72,6 @@ pub async fn get_site_info() -> HashMap<String, Value> {
     map.insert("badges".to_string(), to_value!(badges));
     //缓存数据
     log::info!("key:{}数据不存在", redis_key_constants::SITE_INFO_MAP);
-    redis_service::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await;
+    RedisService::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await;
     map
 }

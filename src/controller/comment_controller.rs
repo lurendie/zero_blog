@@ -5,7 +5,7 @@
  * @LastEditTime: 2024-04-21 23:26:00
  */
 use crate::models::vo::{page_request::SearchRequest, result::Result};
-use crate::service::comments_service;
+use crate::service::CommentService;
 use actix_web::web::Query;
 use actix_web::{get, Responder};
 use rbatis::{IPage, IPageRequest};
@@ -21,7 +21,7 @@ pub(crate) async fn get_comments(data: Option<Query<SearchRequest>>) -> impl Res
     let mut comments = ValueMap::new();
     let page_request = data.unwrap();
 
-    let list = comments_service::get_comments_page(
+    let list = CommentService::get_comments_page(
         page_request.get_page_num() as usize,
         page_request.get_page(),
         page_request.get_blog_id(),
@@ -34,12 +34,12 @@ pub(crate) async fn get_comments(data: Option<Query<SearchRequest>>) -> impl Res
     data.insert(
         "allComment".into(),
         to_value!(rbs::Value::String(
-            comments_service::get_all_comments(page_request.get_blog_id()).await
+            CommentService::get_all_comments(page_request.get_blog_id()).await
         )),
     );
     data.insert(
         "closeComment".into(),
-        to_value!(comments_service::get_close_comments(page_request.get_blog_id()).await),
+        to_value!(CommentService::get_close_comments(page_request.get_blog_id()).await),
     );
     Result::ok("获取成功!".to_string(), Some(to_value!(data))).ok_json()
 }

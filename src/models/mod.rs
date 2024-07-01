@@ -1,5 +1,5 @@
 /*
- * @Author: lurendie 
+ * @Author: lurendie
  * @Date: 2024-02-24 22:58:03
  * @LastEditors: lurendie
  * @LastEditTime: 2024-05-06 23:24:33
@@ -25,4 +25,7 @@ pub mod visit_record;
 pub mod visitor;
 pub mod vo;
 
+pub mod dto;
+
+pub use dto::blog_with_category::BlogWithCategoryDto;
 pub use vo::result::Result;

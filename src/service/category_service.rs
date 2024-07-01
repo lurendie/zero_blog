@@ -10,20 +10,17 @@ use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
 use crate::constant::redis_key_constants;
-use crate::dao::{
-    blog_dao,
-    category_dao::{self, get_list as getList},
-};
+use crate::dao::{BlogDao, CategoryDao};
 use crate::models::vo::categorie::Categorie;
 use crate::models::vo::serise::Series;
-use crate::service::redis_service;
+use crate::service::RedisService;
 /**
  * 查询所有分类
  */
 pub async fn get_list() -> Vec<Value> {
     //1.查询Redis
     let result =
-        redis_service::get_value_vec(redis_key_constants::CATEGORY_NAME_LIST.to_string()).await;
+        RedisService::get_value_vec(redis_key_constants::CATEGORY_NAME_LIST.to_string()).await;
     if let Some(result) = result {
         let arr = match result {
             Value::Array(arr) => {
@@ -39,7 +36,7 @@ pub async fn get_list() -> Vec<Value> {
     }
     //2.查询数据库
     let mut result = vec![];
-    getList()
+    CategoryDao::get_list()
         .await
         .iter()
         .for_each(|item| result.push(to_value!(item)));
@@ -49,7 +46,7 @@ pub async fn get_list() -> Vec<Value> {
         "key:{} 数据不存在",
         redis_key_constants::CATEGORY_NAME_LIST.to_string()
     );
-    redis_service::set_value_vec(
+    RedisService::set_value_vec(
         redis_key_constants::CATEGORY_NAME_LIST.to_string(),
         &to_value!(&result),
     )
@@ -65,12 +62,12 @@ pub async fn get_categorys_count() -> ValueMap {
     let mut legend = vec![];
     let mut series = vec![];
 
-    for item in category_dao::get_list().await {
+    for item in CategoryDao::get_list().await {
         legend.push(to_value!(item.name.clone()));
         let series_item = Series::new(
             item.id,
             item.name.clone(),
-            blog_dao::get_category_count(item.name).await,
+            BlogDao::get_category_count(item.name).await,
         );
         series.push(series_item);
     }
@@ -81,7 +78,7 @@ pub async fn get_categorys_count() -> ValueMap {
 
 pub(crate) async fn get_categories() -> Vec<Categorie> {
     let mut list = vec![];
-    category_dao::get_list().await.iter().for_each(|item| {
+    CategoryDao::get_list().await.iter().for_each(|item| {
         list.push(Categorie::new(
             Some(item.id.clone()),
             item.name.clone(),

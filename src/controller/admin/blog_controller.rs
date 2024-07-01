@@ -4,7 +4,11 @@ use crate::{
     models::{vo::page_request::SearchRequest, Result},
 };
 use actix_jwt_session::Authenticated;
-use actix_web::{routes, web::Query, Responder};
+use actix_web::{
+    routes,
+    web::{self, Query},
+    Responder,
+};
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 
@@ -17,4 +21,16 @@ pub async fn blogs(query: Query<SearchRequest>, _: Authenticated<AppClaims>) -> 
     map.insert(to_value!("blogs"), to_value!(page));
     map.insert(to_value!("categories"), to_value!(categories));
     Result::ok("请求成功".to_string(), Some(to_value!(map))).ok_json()
+}
+
+#[routes]
+#[put("/blog/{blog_id}/visibility")]
+pub async fn visibility(
+    path: web::Path<u16>,
+    _query: Query<SearchRequest>,
+    _: Authenticated<AppClaims>,
+) -> impl Responder {
+    let id = path.into_inner();
+    let _ = blog_service::update_by_id(id).await;
+    Result::ok("请求成功".to_string(), Some(to_value!(false))).ok_json()
 }
