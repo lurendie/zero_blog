@@ -1,256 +1,274 @@
+use crate::models::blog::Blog;
+use crate::models::dto::blog_datetime::BlogDateTime;
+use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::models::{category::Category, tag::Tag};
 use crate::rbatis::RBATIS;
-use rbatis::rbdc::DateTime;
+
 use rbatis::{Error, Page, PageRequest};
 use rbs::to_value;
-use serde::{Deserialize, Serialize};
 
-// 获取公开的博文
-pub async fn get_blog_list_by_is_published(
-    page_num: u64,
-    page_size: u64,
-) -> Result<Page<BlogInfo>, rbatis::Error> {
-    let page = BlogInfo::select_page(
-        &RBATIS.acquire().await.expect("异常"),
-        &PageRequest::new(page_num, page_size),
-    )
-    .await
-    .unwrap_or_else(|e: rbatis::Error| {
-        log::error!("{e}",);
-        Page::new(0, 0)
-    });
-    Ok(page)
-}
+pub struct BlogDao;
 
-pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
-    let sql = "
+impl BlogDao {
+    // 获取公开的分页博文
+    pub async fn get_blog_pages(
+        page_num: u64,
+        page_size: u64,
+    ) -> Result<Page<BlogInfo>, rbatis::Error> {
+        let page = BlogInfo::select_page(
+            &RBATIS.acquire().await.expect("异常"),
+            &PageRequest::new(page_num, page_size),
+        )
+        .await
+        .unwrap_or_else(|e: rbatis::Error| {
+            log::error!("{e}",);
+            Page::new(0, 0)
+        });
+        Ok(page)
+    }
+    /**
+     * 获取公开的博文(不分页)
+     */
+    pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
+        let sql = "
         select
              blog.id,blog.title,blog.description,blog.create_time,blog.views ,blog.words,blog.read_time,blog.password,blog.is_top
          from
              blog  WHERE is_published = ?";
-    let blog_info = RBATIS
-        .query_decode::<Vec<BlogInfo>>(&sql, vec![to_value!(true)])
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("{e}");
-            vec![]
-        });
 
-    Ok(blog_info)
-}
+        let blog_info = RBATIS
+            .query_decode::<Vec<BlogInfo>>(&sql, vec![to_value!(true)])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{e}");
+                vec![]
+            });
 
-pub async fn get_blog_count() -> Result<i32, rbatis::Error> {
-    let sql = "
+        Ok(blog_info)
+    }
+    //查询所有博文数量(全部)
+    pub async fn get_blog_count() -> Result<i32, rbatis::Error> {
+        let sql = "
         select
              count(blog.id)
          from
              blog";
-    let blog_info = RBATIS
-        .query_decode::<i32>(&sql, vec![])
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("{e}");
-            0
-        });
+        let blog_info = RBATIS
+            .query_decode::<i32>(&sql, vec![])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{e}");
+                0
+            });
 
-    Ok(blog_info)
-}
+        Ok(blog_info)
+    }
 
-//根据名称查询该分类博文
-pub async fn get_by_category(
-    name: String,
-    page_num: usize,
-    page_size: u64,
-) -> Result<Page<BlogInfo>, rbatis::Error> {
-    //分类查询
-    let sql = format!(
-        "
+    //根据名称查询该分类博文(分页)
+    pub async fn get_by_category(
+        name: String,
+        page_num: usize,
+        page_size: u64,
+    ) -> Result<Page<BlogInfo>, rbatis::Error> {
+        //分类查询
+        let sql = format!(
+            "
     select
      id,category_name as name
     from
      category
      where category.category_name = \"{}\"
  ",
-        name
-    );
-    let args = vec![];
-    let category_query = RBATIS.query_decode::<Category>(&*sql, args).await;
-    let category = category_query.unwrap_or_else(|e| {
-        log::error!("{e}");
-        Category::default()
-    });
-    //博文查询
-    let page_request = PageRequest::new(page_num.try_into().unwrap(), page_size);
-    let page = BlogInfo::select_page_by_categoryid(
-        &RBATIS.acquire().await.expect("异常"),
-        &page_request,
-        category.id.to_string().as_str(),
-    )
-    .await
-    .unwrap_or_else(|e| {
-        log::error!("异常:{e}");
-        Page::new(0, 0)
-    });
-    Ok(page)
-}
+            name
+        );
+        let args = vec![];
+        let category_query = RBATIS.query_decode::<Category>(&*sql, args).await;
+        let category = category_query.unwrap_or_else(|e| {
+            log::error!("{e}");
+            Category::default()
+        });
+        //博文查询
+        let page_request = PageRequest::new(page_num.try_into().unwrap(), page_size);
+        let page = BlogInfo::select_page_by_categoryid(
+            &RBATIS.acquire().await.expect("异常"),
+            &page_request,
+            category.id.to_string().as_str(),
+        )
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("异常:{e}");
+            Page::new(0, 0)
+        });
+        Ok(page)
+    }
 
-pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
-    let blog_detail =
-        BlogDetail::select_by_id(&RBATIS.acquire().await.unwrap(), id.to_string()).await;
-    blog_detail.unwrap_or_else(|e| {
-        log::error!("{e}");
-        None
-    })
-}
+    pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
+        let blog_detail =
+            BlogDetail::select_by_id(&RBATIS.acquire().await.unwrap(), id.to_string()).await;
+        blog_detail.unwrap_or_else(|e| {
+            log::error!("{e}");
+            None
+        })
+    }
 
-//根据标签名称查询该分类博文
-pub async fn get_by_tag(
-    name: String,
-    page_num: usize,
-    page_size: u64,
-) -> Result<Page<BlogInfo>, rbatis::Error> {
-    let sql = format!(
-        "
+    //根据标签名称查询该分类博文(分页)
+    pub async fn get_by_tag(
+        name: String,
+        page_num: usize,
+        page_size: u64,
+    ) -> Result<Page<BlogInfo>, rbatis::Error> {
+        let sql = format!(
+            "
     select
     id,tag_name as name,color
     from
     tag
      where tag_name = \"{}\"
  ",
-        name
-    );
-    let args = vec![];
-    let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
-    let tag = tag_query.unwrap_or_else(|e| {
-        println!("{:?}", e);
-        Tag::default()
-    });
-    let sql = "select 
+            name
+        );
+        let args = vec![];
+        let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
+        let tag = tag_query.unwrap_or_else(|e| {
+            println!("{:?}", e);
+            Tag::default()
+        });
+        let sql = "select 
     blog.*
     from blog,blog_tag where blog.id=blog_tag.blog_id and blog_tag.tag_id= ? limit ?,?";
-    let args = vec![
-        to_value!(tag.id.unwrap()),
-        to_value!((page_num as u64 - 1) * page_size),
-        to_value!(page_size),
-    ];
-    let blog_query = RBATIS.query_decode::<Vec<BlogInfo>>(&sql, args).await;
+        let args = vec![
+            to_value!(tag.id.unwrap()),
+            to_value!((page_num as u64 - 1) * page_size),
+            to_value!(page_size),
+        ];
+        let blog_query = RBATIS.query_decode::<Vec<BlogInfo>>(&sql, args).await;
 
-    let page = Page {
-        records: blog_query.unwrap_or_else(|e| {
-            log::error!("{:?}", e);
-            vec![]
-        }),
-        total: 7,
-        page_no: page_num.try_into().unwrap(),
-        page_size,
-        do_count: true,
-    };
-    Ok(page)
-}
+        let page = Page {
+            records: blog_query.unwrap_or_else(|e| {
+                log::error!("{:?}", e);
+                vec![]
+            }),
+            total: 7,
+            page_no: page_num.try_into().unwrap(),
+            page_size,
+            do_count: true,
+        };
+        Ok(page)
+    }
 
-//博文日期时间映射结构体
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct BlogDateTime {
-    pub(crate) create_time: DateTime,
-}
-
-//查询所有的公开文章的日期时间
-pub(crate) async fn get_all_datetime() -> Result<Vec<BlogDateTime>, Error> {
-    let sql = "select 
+    //查询所有的公开文章的日期时间
+    pub(crate) async fn get_all_datetime() -> Result<Vec<BlogDateTime>, Error> {
+        let sql = "select 
     blog.create_time
     from blog where is_published = ? GROUP BY create_time ORDER BY create_time DESC";
-    let datetime_query = RBATIS
-        .query_decode::<Vec<BlogDateTime>>(sql, vec![to_value!(1)])
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("{}", e);
-            vec![]
-        });
-    Ok(datetime_query)
-}
+        let datetime_query = RBATIS
+            .query_decode::<Vec<BlogDateTime>>(sql, vec![to_value!(1)])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{}", e);
+                vec![]
+            });
+        Ok(datetime_query)
+    }
 
-//根据时间查询博文
-pub(crate) async fn get_by_date(date_time: String) -> Result<Vec<BlogInfo>, Error> {
-    let year = &date_time.as_str()[0..4];
-    let month = &date_time.as_str()[6..];
-    let sql = "SELECT *
+    //根据时间查询博文
+    pub(crate) async fn get_by_date(date_time: String) -> Result<Vec<BlogInfo>, Error> {
+        let year = &date_time.as_str()[0..4];
+        let month = &date_time.as_str()[6..];
+        let sql = "SELECT *
         FROM blog
         WHERE YEAR(create_time) = ?
           AND MONTH(create_time) = ?;";
-    let datetime_query = RBATIS
-        .query_decode::<Vec<BlogInfo>>(sql, vec![to_value!(year), to_value!(month)])
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("{}", e);
-            vec![]
-        });
-    Ok(datetime_query)
-}
+        let datetime_query = RBATIS
+            .query_decode::<Vec<BlogInfo>>(sql, vec![to_value!(year), to_value!(month)])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{}", e);
+                vec![]
+            });
+        Ok(datetime_query)
+    }
 
-//查询公开文章的数量
-pub(crate) async fn get_archives_count() -> Result<u64, Error> {
-    let sql = "SELECT count(id)
+    //查询公开文章的数量
+    pub(crate) async fn get_archives_count() -> Result<u64, Error> {
+        let sql = "SELECT count(id)
     FROM blog
     WHERE is_published = 1";
-    let count = RBATIS
-        .query_decode::<u64>(sql, vec![])
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("{}", e);
-            0
-        });
-    Ok(count)
-}
+        let count = RBATIS
+            .query_decode::<u64>(sql, vec![])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{}", e);
+                0
+            });
+        Ok(count)
+    }
 
-/**
- * 查询分类下所有文章的数量
- */
-pub async fn get_category_count(name: String) -> i32 {
-    let sql = "SELECT count(*)
+    /**
+     * 查询分类下所有文章的数量
+     */
+    pub async fn get_category_count(name: String) -> i32 {
+        let sql = "SELECT count(*)
     FROM blog,category
     WHERE blog.category_id=category.id and category.category_name= ?;";
-    RBATIS
-        .query_decode(sql, vec![to_value!(name)])
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("{}", e);
-            0
-        })
-}
+        RBATIS
+            .query_decode(sql, vec![to_value!(name)])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{}", e);
+                0
+            })
+    }
 
-/**
- * 查询标签下所有文章的数量
- */
-pub async fn get_tags_count(name: String) -> i32 {
-    //1.查询标签对象
-    let sql = format!(
-        "
+    /**
+     * 查询标签下所有文章的数量
+     */
+    pub async fn get_tags_count(name: String) -> i32 {
+        //1.查询标签对象
+        let sql = format!(
+            "
     select
     id,tag_name as name,color
     from
     tag
      where tag_name = \"{}\"
  ",
-        name
-    );
-    let args = vec![];
-    let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
-    let tag = tag_query.unwrap_or_else(|e| {
-        println!("{:?}", e);
-        Tag::default()
-    });
-    let sql = "select 
+            name
+        );
+        let args = vec![];
+        let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
+        let tag = tag_query.unwrap_or_else(|e| {
+            println!("{:?}", e);
+            Tag::default()
+        });
+        let sql = "select 
     count(blog.id)
     from blog,blog_tag where blog.id=blog_tag.blog_id and blog_tag.tag_id= ?";
 
-    RBATIS
-        .query_decode(sql, vec![to_value!(tag.id.unwrap_or_default())])
+        RBATIS
+            .query_decode(sql, vec![to_value!(tag.id.unwrap_or_default())])
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("{}", e);
+                0
+            })
+    }
+    /**
+     * 获取全部博文并分页返回，支持按标题模糊查询
+     */
+    pub(crate) async fn get_blog_all_page(page: &SearchRequest) -> Page<Blog> {
+        Blog::select_page_blog_all(
+            &RBATIS.acquire().await.unwrap(),
+            &PageRequest::new(page.get_page_num() as u64, page.get_page_size() as u64),
+            page.get_title().as_str(),
+        )
         .await
         .unwrap_or_else(|e| {
             log::error!("{}", e);
-            0
+            Page::default()
         })
+    }
 }
 
 #[cfg(test)]

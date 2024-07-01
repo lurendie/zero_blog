@@ -80,7 +80,9 @@ impl AppServer {
                         .app_data(Data::new(storage.clone()))
                         .wrap(factory.clone())
                         .service(user_controller::login)
-                        .service(admin::dashboard_controller::dashboard), //.default_service(web::to(adminIndexController::default)),
+                        .service(admin::dashboard_controller::dashboard) //.default_service(web::to(adminIndexController::default)),
+                        .service(admin::blog_controller::blogs)
+                        .service(admin::blog_controller::visibility),
                 )
                 .default_service(web::to(index_controller::default))
         })

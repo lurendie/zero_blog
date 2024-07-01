@@ -1,13 +1,12 @@
 use crate::constant::blog_info_constants;
 use crate::constant::redis_key_constants;
-use crate::dao::blog_dao;
-use crate::dao::blog_dao::{
-    get_blog_list, get_blog_list_by_is_published as get_blog_public, get_by_category,
-    get_by_id as getById, get_by_tag,
-};
-use crate::dao::{category_dao, tag_dao};
+use crate::dao::BlogDao;
+use crate::dao::{CategoryDao, TagDao};
+use crate::models::blog::Blog;
+use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
-use crate::service::redis_service;
+use crate::rbatis::RBATIS;
+use crate::service::RedisService;
 use rand::Rng;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
@@ -24,7 +23,7 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
         num = page_num.unwrap();
     }
     //1.查询redis缓存
-    let redis_cache = redis_service::get_hash_key(
+    let redis_cache = RedisService::get_hash_key(
         redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
         num.to_string(),
     )
@@ -41,7 +40,7 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
     //3.查询数据库
     let mut map: HashMap<String, Value> = HashMap::new();
     let page_list: Page<BlogInfo>;
-    page_list = match get_blog_public(num, blog_info_constants::PAGE_SIZE).await {
+    page_list = match BlogDao::get_blog_pages(num, blog_info_constants::PAGE_SIZE).await {
         Ok(mut ok) => {
             bloginfo_handle(ok.get_records_mut()).await;
             ok
@@ -60,7 +59,7 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
         num
     );
     if !page_list.get_records().is_empty() {
-        let _ = redis_service::set_hash_key(
+        let _ = RedisService::set_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
             num.to_string(),
             &map,
@@ -73,7 +72,7 @@ pub(crate) async fn get_blog_list_by_is_published(page_num: Option<u64>) -> Hash
 pub async fn get_blog_list_random() -> Vec<Value> {
     //1.查询Redis 缓存数据
     let redis_cache =
-        redis_service::get_value_vec(redis_key_constants::RANDOM_BLOG_LIST.to_string()).await;
+        RedisService::get_value_vec(redis_key_constants::RANDOM_BLOG_LIST.to_string()).await;
     if let Some(redis_cache) = redis_cache {
         let arr = match redis_cache {
             Value::Array(arr) => {
@@ -88,7 +87,7 @@ pub async fn get_blog_list_random() -> Vec<Value> {
         return arr;
     }
     //2.查询数据库
-    match get_blog_list().await {
+    match BlogDao::get_blog_list().await {
         Ok(mut list) => {
             bloginfo_handle(&mut list).await;
             let mut result = vec![];
@@ -117,7 +116,7 @@ pub async fn get_blog_list_random() -> Vec<Value> {
                 redis_key_constants::RANDOM_BLOG_LIST.to_string()
             );
             //保存到Redis
-            redis_service::set_value_vec(
+            RedisService::set_value_vec(
                 redis_key_constants::RANDOM_BLOG_LIST.to_string(),
                 &to_value!(&result),
             )
@@ -135,7 +134,7 @@ pub async fn get_blog_list_random() -> Vec<Value> {
 pub async fn get_blog_list_new() -> Vec<Value> {
     //1.查询Redis 缓存数据
     let redis_cache =
-        redis_service::get_value_vec(redis_key_constants::NEW_BLOG_LIST.to_string()).await;
+        RedisService::get_value_vec(redis_key_constants::NEW_BLOG_LIST.to_string()).await;
     if let Some(redis_cache) = redis_cache {
         let arr = match redis_cache {
             Value::Array(arr) => {
@@ -150,7 +149,7 @@ pub async fn get_blog_list_new() -> Vec<Value> {
         return arr;
     }
     //2.查询数据库
-    match get_blog_list().await {
+    match BlogDao::get_blog_list().await {
         Ok(mut list) => {
             bloginfo_handle(&mut list).await;
             let mut result = vec![];
@@ -177,7 +176,7 @@ pub async fn get_blog_list_new() -> Vec<Value> {
                 redis_key_constants::NEW_BLOG_LIST.to_string()
             );
             //保存到Redis
-            redis_service::set_value_vec(
+            RedisService::set_value_vec(
                 redis_key_constants::NEW_BLOG_LIST.to_string(),
                 &to_value!(&result),
             )
@@ -195,7 +194,8 @@ pub async fn get_blog_list_new() -> Vec<Value> {
 pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value> {
     let mut map: HashMap<String, Value> = HashMap::new();
     let mut page_list: Page<BlogInfo>;
-    page_list = match get_by_category(name, page_num, blog_info_constants::PAGE_SIZE).await {
+    page_list = match BlogDao::get_by_category(name, page_num, blog_info_constants::PAGE_SIZE).await
+    {
         Ok(mut ok) => {
             bloginfo_handle(ok.get_records_mut()).await;
             ok
@@ -215,7 +215,9 @@ pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value
 }
 //根据ID查找博文
 pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
-    let mut blog = getById(id).await.unwrap_or_else(|| BlogDetail::new());
+    let mut blog = BlogDao::get_by_id(id)
+        .await
+        .unwrap_or_else(|| BlogDetail::new());
     blog.content = markdown::to_html(&blog.content);
     Some(blog)
 }
@@ -224,7 +226,7 @@ pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
 pub async fn get_by_tag_name(name: String, page_num: usize) -> HashMap<String, Value> {
     let mut map: HashMap<String, Value> = HashMap::new();
     let mut page_list: Page<BlogInfo>;
-    page_list = match get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await {
+    page_list = match BlogDao::get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await {
         Ok(mut ok) => {
             bloginfo_handle(ok.get_records_mut()).await;
             ok
@@ -247,7 +249,7 @@ pub async fn get_by_tag_name(name: String, page_num: usize) -> HashMap<String, V
 pub(crate) async fn get_archives() -> ValueMap {
     //获取所有文章的日期
     let mut map: ValueMap = ValueMap::new();
-    let blog_datetimes = blog_dao::get_all_datetime().await.unwrap_or_else(|e| {
+    let blog_datetimes = BlogDao::get_all_datetime().await.unwrap_or_else(|e| {
         log::error!("{:?}", e);
         vec![]
     });
@@ -260,7 +262,7 @@ pub(crate) async fn get_archives() -> ValueMap {
     for item in date_times.iter_mut() {
         let mut itme_map: Vec<BlogArchive> = vec![];
 
-        let blogs = blog_dao::get_by_date(item.clone())
+        let blogs = BlogDao::get_by_date(item.clone())
             .await
             .unwrap_or_else(|e| {
                 log::error!("{:?}", e);
@@ -284,7 +286,7 @@ pub(crate) async fn get_archives() -> ValueMap {
 }
 
 pub(crate) async fn get_archives_count() -> Option<usize> {
-    Some(blog_dao::get_archives_count().await.unwrap() as usize)
+    Some(BlogDao::get_archives_count().await.unwrap() as usize)
 }
 
 /**
@@ -293,7 +295,7 @@ pub(crate) async fn get_archives_count() -> Option<usize> {
 async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
     for item in list.iter_mut() {
         let id = item.id.unwrap();
-        item.category = Some(category_dao::get_by_bloginfo_id(id).await.unwrap());
+        item.category = Some(CategoryDao::get_by_bloginfo_id(id).await.unwrap());
         if let Some(password) = &item.password {
             //如果password!=null
             if *password != "" {
@@ -305,7 +307,7 @@ async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
         item.password = Some(String::from(""));
         //转HTML
         item.description = markdown::to_html(&item.description);
-        let tags = tag_dao::get_blog_tags(id).await;
+        let tags = TagDao::get_blog_tags(id).await;
         item.tags = Some(tags);
         item.create_time = item.create_time.as_str()[0..19].to_string();
     }
@@ -315,7 +317,34 @@ async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
  * count Blogs
  */
 pub async fn get_blog_count() -> i32 {
-    blog_dao::get_blog_count().await.unwrap()
+    BlogDao::get_blog_count().await.unwrap_or_default()
+}
+
+/**
+ * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。
+ */
+pub async fn get_blog_all_page(page: &SearchRequest) -> ValueMap {
+    let mut map: ValueMap = ValueMap::new();
+    let mut page_list = BlogDao::get_blog_all_page(page).await;
+    for item in page_list.get_records_mut() {
+        item.category = Some(CategoryDao::get_by_id(item.category_id).await.unwrap())
+    }
+    map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
+    map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
+    map.insert(to_value!("pageSize"), to_value!(page_list.page_size()));
+    map.insert(to_value!("pages"), to_value!(page_list.pages()));
+    map.insert(to_value!("total"), to_value!(page_list.total()));
+    map.insert(to_value!("list"), to_value!(page_list.get_records()));
+    map
+}
+
+//根据ID查找博文
+pub(crate) async fn update_by_id(id: u16) {
+    let blog = Blog::get_blog(&RBATIS.acquire().await.unwrap(), id.to_string().as_str())
+        .await
+        .unwrap();
+    //let blog = Blog::select_test(&RBATIS.acquire().await.unwrap(), 2.to_string().as_str()).await;
+    println!("blog: {:?}", blog);
 }
 
 #[cfg(test)]

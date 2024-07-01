@@ -54,6 +54,9 @@ impl<T> Result<T> {
 }
 //针对于ValueMap具体实现
 impl Result<Value> {
+    pub fn new_value(code: u16, msg: String, data: Option<Value>) -> Result<Value> {
+        Result { code, msg, data }
+    }
     //无异常返回
     pub fn ok_json(&self) -> HttpResponse {
         HttpResponse::Ok()

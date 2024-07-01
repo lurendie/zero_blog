@@ -10,3 +10,4 @@ pub mod introduction;
 pub mod page_request;
 pub mod result;
 pub mod serise;
+pub mod categorie;

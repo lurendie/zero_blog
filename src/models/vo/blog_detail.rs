@@ -1,8 +1,10 @@
-use crate::models::category::Category;
 use rbatis::rbdc::datetime::DateTime;
-use rbatis::{crud, impl_select};
+use rbatis::{crud, impl_select, impl_select_page};
 use serde::de::Unexpected;
 use serde::{Deserialize, Deserializer, Serialize};
+
+use crate::dao::CategoryDao;
+use crate::models::category::Category;
 //博客详情信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BlogDetail {
@@ -25,7 +27,7 @@ pub struct BlogDetail {
     pub(crate) read_time: u16,
     #[serde(deserialize_with = "bool_from_int")]
     pub(crate) is_top: bool,
-    pub(crate) category: Option<Category>,
+
     pub(crate) password: Option<String>,
 }
 
@@ -50,5 +52,24 @@ where
     }
 }
 
+// // id 类型转 category
+fn _category_from_id<'de, D>(deserializer: D) -> Result<Option<Category>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    if let Ok(id) = u16::deserialize(deserializer) {
+        let fut = CategoryDao::get_by_id(id as u16);
+        println!("id: {:?}", id);
+        // let category = category_dao::get_by_id(id as u16).await.unwrap();
+        // let mut category = Category::default();
+        let _ = Box::pin(async move { return Some(fut.await.unwrap()) });
+    }
+    Ok(Some(Category::default()))
+}
+
 crud!(BlogDetail {}, "blog");
 impl_select!(BlogDetail{select_by_id(id:String) -> Option => "`where id = #{id} limit 1`"},"blog");
+
+impl_select_page!(BlogDetail{select_page_blog_all(title:&str) =>"where 1=1
+if !title.is_empty():
+   `and title like #{title}`"}, "blog");

@@ -1,6 +1,6 @@
 use crate::dao::site_setting_dao;
 use rbs::{to_value, value::map::ValueMap};
-use crate::dao::friend_dao;
+use crate::dao::FriendDao;
 //获取友链数据
 pub(crate) async fn get_friend()->ValueMap{
     let mut friend_map =ValueMap::new();
@@ -20,7 +20,7 @@ pub(crate) async fn get_friend()->ValueMap{
             friend_info.insert(to_value!("commentEnabled"), to_value!(item.value=="1"));
         };
     });
-    let friend_list=friend_dao::get_friends().await.unwrap_or_else(|e|{
+    let friend_list=FriendDao::get_friends().await.unwrap_or_else(|e|{
         log::error!("{}",e);
         vec![]
     });
