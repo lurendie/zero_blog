@@ -51,14 +51,14 @@ jobs:
         shell: bash
         run: |
           mkdir archive
-          cp LICENSE README.md archive/
+          cp LICENSE README.MD archive/
           cd archive
           if [ "${{ matrix.build }}" = "windows" ]; then
             cp "../target/${{ matrix.target }}/release/zero_blog.exe" ./
-            7z a "${{ matrix.archive-name }}" LICENSE README.md zero_blog.exe
+            7z a "${{ matrix.archive-name }}" LICENSE README.MD zero_blog.exe
           else
             cp "../target/${{ matrix.target }}/release/zero_blog" ./
-            tar -czf "${{ matrix.archive-name }}" LICENSE README.md zero_blog
+            tar -czf "${{ matrix.archive-name }}" LICENSE README.MD zero_blog
           fi
       - name: Upload archive
         uses: actions/upload-artifact@v1
