@@ -7,7 +7,7 @@
  */
 
 use crate::models::Result;
-use crate::{middleware::AppClaims, service::user_service};
+use crate::{middleware::AppClaims, service::UserService};
 use actix_jwt_session::{
     JwtTtl, OffsetDateTime, RefreshTtl, SessionStorage, Uuid, JWT_HEADER_NAME, REFRESH_HEADER_NAME,
 };
@@ -37,7 +37,7 @@ pub async fn login(
     session: MaybeAuthenticated<AppClaims>,
 ) -> impl Responder {
     //验证账号 密码是否正确
-    let mut user = user_service::get_by_username(&user_form.username).await;
+    let mut user = UserService::get_by_username(&user_form.username).await;
 
     if let Some(user) = user.as_mut() {
         //验证账号密码是否正确,排除非Admin账号登录

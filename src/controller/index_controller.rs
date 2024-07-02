@@ -7,7 +7,7 @@
  */
 use crate::models::vo::result::Result;
 
-use crate::service::{blog_service, category_service, site_setting_service, tag_service};
+use crate::service::{BlogService, CategoryService, SiteSettingService, TagService};
 use actix_web::http::header;
 use actix_web::{routes, HttpResponse, Responder};
 use rbs::to_value;
@@ -21,11 +21,11 @@ use std::collections::HashMap;
 #[get("/site")]
 #[options("/site")]
 pub async fn site() -> impl Responder {
-    let mut map: HashMap<String, Value> = site_setting_service::get_site_info().await;
-    let category_list = category_service::get_list().await;
-    let random_list = blog_service::get_blog_list_random().await;
-    let new_list = blog_service::get_blog_list_new().await;
-    let tag_list = tag_service::get_tags().await;
+    let mut map: HashMap<String, Value> = SiteSettingService::get_site_info().await;
+    let category_list = CategoryService::get_list().await;
+    let random_list = BlogService::get_blog_list_random().await;
+    let new_list = BlogService::get_blog_list_new().await;
+    let tag_list = TagService::get_tags().await;
     map.insert("newBlogList".to_string(), to_value!(new_list));
     map.insert("categoryList".to_string(), to_value!(category_list));
     map.insert("tagList".to_string(), to_value!(tag_list));

@@ -7,24 +7,27 @@ use rbs::to_value;
 use rbs::Value;
 use std::collections::HashMap;
 
-pub async fn get_site_info() -> HashMap<String, Value> {
-    //查询缓存
-    let cache_result =
-        RedisService::get_value_map(redis_key_constants::SITE_INFO_MAP.to_string()).await;
-    if let Some(cache_result) = cache_result {
-        log::info!("key:{}数据存在", redis_key_constants::SITE_INFO_MAP);
-        return cache_result;
-    }
+pub struct SiteSettingService;
 
-    //查询数据库
-    let site_setting_list = dao::site_setting_dao::get_list().await; // 假设这是一个 Vec 或其他可迭代集合
-    let mut map: HashMap<String, Value> = HashMap::new();
-    let mut introduction = introduction::Introduction::new();
-    let mut site_info: HashMap<String, Value> = HashMap::new();
-    let mut badges = vec![];
-    let mut favorites: Vec<Favorite> = vec![];
-    for v in site_setting_list {
-        match v.r#type {
+impl SiteSettingService {
+    pub async fn get_site_info() -> HashMap<String, Value> {
+        //查询缓存
+        let cache_result =
+            RedisService::get_value_map(redis_key_constants::SITE_INFO_MAP.to_string()).await;
+        if let Some(cache_result) = cache_result {
+            log::info!("key:{}数据存在", redis_key_constants::SITE_INFO_MAP);
+            return cache_result;
+        }
+
+        //查询数据库
+        let site_setting_list = dao::site_setting_dao::get_list().await; // 假设这是一个 Vec 或其他可迭代集合
+        let mut map: HashMap<String, Value> = HashMap::new();
+        let mut introduction = introduction::Introduction::new();
+        let mut site_info: HashMap<String, Value> = HashMap::new();
+        let mut badges = vec![];
+        let mut favorites: Vec<Favorite> = vec![];
+        for v in site_setting_list {
+            match v.r#type {
                 //类型1
                 1 => {
                     if  site_setting_constants::COPYRIGHT == v.name_en{
@@ -65,13 +68,14 @@ pub async fn get_site_info() -> HashMap<String, Value> {
                 //不存在,返回单元类型
                 _ => (),
             }
+        }
+        introduction.favorites = favorites;
+        map.insert("introduction".to_string(), to_value!(introduction));
+        map.insert("siteInfo".to_string(), to_value!(site_info));
+        map.insert("badges".to_string(), to_value!(badges));
+        //缓存数据
+        log::info!("key:{}数据不存在", redis_key_constants::SITE_INFO_MAP);
+        RedisService::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await;
+        map
     }
-    introduction.favorites = favorites;
-    map.insert("introduction".to_string(), to_value!(introduction));
-    map.insert("siteInfo".to_string(), to_value!(site_info));
-    map.insert("badges".to_string(), to_value!(badges));
-    //缓存数据
-    log::info!("key:{}数据不存在", redis_key_constants::SITE_INFO_MAP);
-    RedisService::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await;
-    map
 }
