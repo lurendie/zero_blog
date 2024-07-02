@@ -57,7 +57,7 @@ jobs:
             cp "../target/${{ matrix.target }}/release/zero_blog.exe" ./
             7z a "${{ matrix.archive-name }}" LICENSE README.md zero_blog.exe
           else
-            cp "../target/${{ matrix.target }}/release/sgf-render" ./
+            cp "../target/${{ matrix.target }}/release/zero_blog" ./
             tar -czf "${{ matrix.archive-name }}" LICENSE README.md zero_blog
           fi
       - name: Upload archive
