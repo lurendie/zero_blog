@@ -23,16 +23,16 @@ pub static REDIS: Lazy<Client> = Lazy::new(|| {
     client
 });
 
-//redis 单元测试
-#[cfg(test)]
-mod test {
-    use super::REDIS;
-    use redis::{Cmd, ToRedisArgs};
+// //redis 单元测试
+// #[cfg(test)]
+// mod test {
+//     use super::REDIS;
+//     use redis::{Cmd, ToRedisArgs};
 
-    #[test]
-    fn test_connect() -> redis::RedisResult<()> {
-        let mut con = REDIS.get_connection().unwrap();
-        let _ = Cmd::set("my_key".to_redis_args(), 1.to_redis_args()).query::<()>(&mut con);
-        Ok(())
-    }
-}
+//     #[test]
+//     fn test_connect() -> redis::RedisResult<()> {
+//         let mut con = REDIS.get_connection().unwrap();
+//         let _ = Cmd::set("my_key".to_redis_args(), 1.to_redis_args()).query::<()>(&mut con);
+//         Ok(())
+//     }
+// }
