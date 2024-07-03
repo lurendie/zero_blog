@@ -24,3 +24,5 @@ mod utils;
 mod redis;
 //中间件
 mod middleware;
+
+pub use config::CONFIG;

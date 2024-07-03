@@ -1,13 +1,7 @@
-/*
- * @Author: lurendie
- * @Date: 2024-04-13 13:32:10
- * @LastEditors: lurendie
- * @LastEditTime: 2024-04-21 23:33:46
- * @FilePath: \zero_blog\src\service\RedisService.rs
- */
 use std::collections::HashMap;
 
 use crate::redis::REDIS;
+use crate::CONFIG;
 use rbs::Value;
 use redis::{Commands, ConnectionLike};
 
@@ -44,8 +38,10 @@ impl RedisService {
         let value_str = serde_json::to_string(&value).unwrap();
         let mut con: Box<dyn ConnectionLike> = Box::new(REDIS.get_connection().unwrap());
         redis::cmd("HSET")
-            .arg(&[key, hash, value_str])
-            .execute(con.as_mut())
+            .arg(&[key.clone(), hash, value_str])
+            .execute(con.as_mut());
+
+        RedisService::expire(key);
     }
     /**
      * Set `key` `value`字符串
@@ -56,7 +52,8 @@ impl RedisService {
         //2.获取连接
         let mut con = REDIS.get_connection().unwrap();
 
-        let _ = con.set::<String, String, String>(key, value_str);
+        let _ = con.set::<String, String, String>(key.clone(), value_str);
+        RedisService::expire(key);
     }
 
     /**
@@ -82,8 +79,8 @@ impl RedisService {
         let value_str = serde_json::to_string(value).unwrap();
         //2.获取连接
         let mut con = REDIS.get_connection().unwrap();
-
-        let _ = con.set::<String, String, String>(key, value_str);
+        let _ = con.set::<String, String, String>(key.clone(), value_str);
+        RedisService::expire(key);
     }
 
     /**
@@ -99,6 +96,14 @@ impl RedisService {
         } else {
             return Some(serde_json::from_str(result.as_str()).unwrap());
         }
+    }
+
+    //设置过期时间
+    pub fn expire(key: String) {
+        let mut con: Box<dyn ConnectionLike> = Box::new(REDIS.get_connection().unwrap());
+        redis::cmd("EXPIRE")
+            .arg(&[key, CONFIG.get().unwrap().redis.ttl.clone()])
+            .execute(con.as_mut())
     }
 }
 

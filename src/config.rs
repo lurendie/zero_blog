@@ -24,6 +24,7 @@ pub struct ReidsCon {
     pub db: u16,
     pub username: String,
     pub password: String,
+    pub ttl: String,
 }
 /**
  * MySQL 配置信息结构体
@@ -45,7 +46,7 @@ pub struct Server {
     pub host: String,          //IP地址
     pub front_adderss: String, //前端页面地址
 }
-static CONFIG: OnceCell<Config> = OnceCell::new();
+pub static CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub fn default() -> &'static Config {
     CONFIG.get_or_init(|| {
