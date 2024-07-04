@@ -1,5 +1,5 @@
-use crate::models::blog::Blog;
 use crate::models::dto::blog_datetime::BlogDateTime;
+use crate::models::dto::blog_dto::BlogDto;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::models::{category::Category, tag::Tag};
@@ -257,8 +257,8 @@ impl BlogDao {
     /**
      * 获取全部博文并分页返回，支持按标题模糊查询
      */
-    pub(crate) async fn get_blog_all_page(page: &SearchRequest) -> Page<Blog> {
-        Blog::select_page_blog_all(
+    pub(crate) async fn get_blog_all_page(page: &SearchRequest) -> Page<BlogDto> {
+        BlogDto::select_page_blog_all(
             &RBATIS.acquire().await.unwrap(),
             &PageRequest::new(page.get_page_num() as u64, page.get_page_size() as u64),
             page.get_title().as_str(),

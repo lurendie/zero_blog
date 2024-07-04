@@ -82,7 +82,9 @@ impl AppServer {
                         .service(user_controller::login)
                         .service(admin::dashboard_controller::dashboard) //.default_service(web::to(adminIndexController::default)),
                         .service(admin::blog_controller::blogs)
-                        .service(admin::blog_controller::visibility),
+                        .service(admin::blog_controller::visibility)
+                        .service(admin::blog_controller::top)
+                        .service(admin::blog_controller::recommend),
                 )
                 .default_service(web::to(index_controller::default))
         })
