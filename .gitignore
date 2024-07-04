@@ -5,4 +5,5 @@ Cargo.lock
 .vscode
 nblog.code-workspace
 Cargo.lock
-/config
+/config/jwt-decoding.bin
+/config/jwt-encoding.bin

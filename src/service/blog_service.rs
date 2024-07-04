@@ -2,7 +2,7 @@ use crate::constant::blog_info_constants;
 use crate::constant::redis_key_constants;
 use crate::dao::BlogDao;
 use crate::dao::{CategoryDao, TagDao};
-use crate::models::blog::Blog;
+use crate::models::vo::blog_visibility::BlogVisibility;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::rbatis::RBATIS;
@@ -327,7 +327,14 @@ pub async fn get_blog_all_page(page: &SearchRequest) -> ValueMap {
     let mut map: ValueMap = ValueMap::new();
     let mut page_list = BlogDao::get_blog_all_page(page).await;
     for item in page_list.get_records_mut() {
-        item.category = Some(CategoryDao::get_by_id(item.category_id).await.unwrap())
+        if item.get_password().is_none() {
+            item.set_password(Some(""));
+        }
+        item.set_category(Some(
+            CategoryDao::get_by_id(item.get_category_id())
+                .await
+                .unwrap(),
+        ));
     }
     map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
     map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
@@ -339,13 +346,13 @@ pub async fn get_blog_all_page(page: &SearchRequest) -> ValueMap {
 }
 
 //根据ID查找博文
-pub(crate) async fn update_by_id(id: u16) {
-    let blog = Blog::get_blog(&RBATIS.acquire().await.unwrap(), id.to_string().as_str())
+pub async fn update_visibility(v: &BlogVisibility) -> bool {
+    let ok = BlogVisibility::update_by_column(&RBATIS.acquire().await.unwrap(), v, "id")
         .await
-        .unwrap();
-    //let blog = Blog::select_test(&RBATIS.acquire().await.unwrap(), 2.to_string().as_str()).await;
-    println!("blog: {:?}", blog);
+        .is_ok();
+    ok
 }
+
 
 #[cfg(test)]
 mod tests {

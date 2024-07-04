@@ -5,32 +5,44 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dao::CategoryDao;
 
-use super::category::Category;
+use crate::models::category::Category;
 
 //Blog
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct Blog {
+pub struct BlogDto {
     id: Option<u16>,
     title: String,
     first_picture: String,
     content: String,
     description: String,
-    #[serde(deserialize_with = "bool_from_int")]
-    is_published: bool,
-    #[serde(deserialize_with = "bool_from_int")]
-    is_recommend: bool,
-    #[serde(deserialize_with = "bool_from_int")]
-    is_appreciation: bool,
-    #[serde(deserialize_with = "bool_from_int")]
-    is_comment_enabled: bool,
+    #[serde(
+        deserialize_with = "bool_from_int",
+        rename(deserialize = "is_published")
+    )]
+    published: bool,
+    #[serde(
+        deserialize_with = "bool_from_int",
+        rename(deserialize = "is_recommend")
+    )]
+    recommend: bool,
+    #[serde(
+        deserialize_with = "bool_from_int",
+        rename(deserialize = "is_appreciation")
+    )]
+    appreciation: bool,
+    #[serde(
+        deserialize_with = "bool_from_int",
+        rename(deserialize = "is_comment_enabled")
+    )]
+    comment_enabled: bool,
     create_time: DateTime,
     update_time: DateTime,
     views: u16,
     words: u16,
     read_time: u16,
     //category_id: u16,
-    #[serde(deserialize_with = "bool_from_int")]
-    is_top: bool,
+    #[serde(deserialize_with = "bool_from_int", rename(deserialize = "is_top"))]
+    top: bool,
     password: Option<String>,
     user_id: u16,
     #[serde(rename(deserialize = "category_id"), skip_serializing)]
@@ -55,20 +67,20 @@ where
     }
 }
 
-crud!(Blog {});
-impl_update!(Blog{update_by_id(id:&str) => "`where id = #{id}`"},"blog");
-impl_select_page!(Blog{select_page() => "`where is_published = 1`"});
-impl_select_page!(Blog{select_page_by_name(name:&str) =>"
+crud!(BlogDto {});
+impl_update!(BlogDto{update_by_id(id:&str) => "`where id = #{id}`"},"blog");
+impl_select_page!(BlogDto{select_page() => "`where is_published = 1`"});
+impl_select_page!(BlogDto{select_page_by_name(name:&str) =>"
      if name != null && name != '':
        `where name != #{name}`
      if name == '':
        `where name != ''`"});
 
-impl_select_page!(Blog{select_page_blog_all(title:&str) =>"where 1=1
+impl_select_page!(BlogDto{select_page_blog_all(title:&str) =>"where 1=1
 if !title.is_empty():
-   `and title like #{title}`"});
+   `and title like #{title}`"},"blog");
 
-impl_select!(Blog{get_blog(id:&str)=>"`where blog.id = #{id}`"});
+impl_select!(BlogDto{get_blog(id:&str)=>"`where blog.id = #{id}`"});
 
 // // id 类型转 category
 fn _category_from_id<'de, D>(deserializer: D) -> Result<Option<Category>, D::Error>
@@ -83,7 +95,7 @@ where
     Ok(Some(Category::default()))
 }
 
-impl Blog {
+impl BlogDto {
     pub fn get_id(&self) -> u16 {
         self.id.unwrap_or(0)
     }
@@ -101,16 +113,16 @@ impl Blog {
         &self.description
     }
     pub fn get_is_published(&self) -> bool {
-        self.is_published
+        self.published
     }
     pub fn get_is_recommend(&self) -> bool {
-        self.is_recommend
+        self.recommend
     }
     pub fn get_is_appreciation(&self) -> bool {
-        self.is_appreciation
+        self.appreciation
     }
     pub fn get_is_comment_enabled(&self) -> bool {
-        self.is_comment_enabled
+        self.comment_enabled
     }
 
     pub fn get_views(&self) -> u16 {
@@ -123,7 +135,7 @@ impl Blog {
         self.read_time
     }
     pub fn get_is_top(&self) -> bool {
-        self.is_top
+        self.top
     }
     pub fn get_password(&self) -> Option<&str> {
         self.password.as_deref()
@@ -159,19 +171,19 @@ impl Blog {
         self
     }
     pub fn set_is_published(&mut self, is_published: bool) -> &mut Self {
-        self.is_published = is_published;
+        self.published = is_published;
         self
     }
     pub fn set_is_recommend(&mut self, is_recommend: bool) -> &mut Self {
-        self.is_recommend = is_recommend;
+        self.recommend = is_recommend;
         self
     }
     pub fn set_is_appreciation(&mut self, is_appreciation: bool) -> &mut Self {
-        self.is_appreciation = is_appreciation;
+        self.appreciation = is_appreciation;
         self
     }
     pub fn set_is_comment_enabled(&mut self, is_comment_enabled: bool) -> &mut Self {
-        self.is_comment_enabled = is_comment_enabled;
+        self.comment_enabled = is_comment_enabled;
         self
     }
     pub fn set_create_time(&mut self, create_time: DateTime) -> &mut Self {
@@ -195,7 +207,7 @@ impl Blog {
         self
     }
     pub fn set_is_top(&mut self, is_top: bool) -> &mut Self {
-        self.is_top = is_top;
+        self.top = is_top;
         self
     }
     pub fn set_password(&mut self, password: Option<&str>) -> &mut Self {
