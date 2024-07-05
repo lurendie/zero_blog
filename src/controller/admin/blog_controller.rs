@@ -37,7 +37,7 @@ pub async fn visibility(
     let id = path.into_inner();
     query.set_id(id as u32);
 
-    let row = blog_service::update_visibility(&query).await;
+    let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
     } else {
@@ -48,7 +48,7 @@ pub async fn visibility(
 #[routes]
 #[put("/blog/top")]
 pub async fn top(query: web::Query<BlogVisibility>, _: Authenticated<AppClaims>) -> impl Responder {
-    let row = blog_service::update_visibility(&query).await;
+    let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
     } else {
@@ -62,12 +62,10 @@ pub async fn recommend(
     query: web::Query<BlogVisibility>,
     _: Authenticated<AppClaims>,
 ) -> impl Responder {
-    let row = blog_service::update_visibility(&query).await;
+    let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
     } else {
         Result::error("更新失败".to_string()).error_json()
     }
-    let _ = BlogService::update_by_id(id).await;
-    Result::ok("请求成功".to_string(), Some(to_value!(false))).ok_json()
 }

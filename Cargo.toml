@@ -9,7 +9,7 @@ edition = "2021"
 name = "zero_blog"
 path = "src/bin/app_dev.rs"
 
-[profile.release]
+[profile.dev]
 opt-level = 3
 debug = false
 split-debuginfo = '...'  # Platform-specific.
