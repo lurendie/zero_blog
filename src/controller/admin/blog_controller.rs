@@ -1,4 +1,6 @@
-use crate::service::{BlogService, CategoryService};
+use std::collections::HashMap;
+
+use crate::service::{BlogService, CategoryService, TagService};
 use crate::{
     middleware::AppClaims,
     models::{vo::blog_visibility::BlogVisibility, vo::page_request::SearchRequest, Result},
@@ -10,8 +12,8 @@ use actix_web::{
     web::{self, Query},
     Responder,
 };
-use rbs::to_value;
 use rbs::value::map::ValueMap;
+use rbs::{to_value, Value};
 
 #[routes]
 #[get("/blogs")]
@@ -68,4 +70,17 @@ pub async fn recommend(
     } else {
         Result::error("更新失败".to_string()).error_json()
     }
+}
+/**
+ * 修改文章 获取分类和标签
+ */
+#[routes]
+#[get("/categoryAndTag")]
+pub async fn category_and_tag() -> impl Responder {
+    let mut map: HashMap<String, Value> = HashMap::new();
+    let tag_list = TagService::get_tags().await;
+    let category_list = CategoryService::get_list().await;
+    map.insert("categories".to_string(), to_value!(category_list));
+    map.insert("tags".to_string(), to_value!(tag_list));
+    Result::ok("请求成功!".to_string(), Some(to_value!(map))).ok_json()
 }

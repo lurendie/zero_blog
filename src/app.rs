@@ -84,7 +84,8 @@ impl AppServer {
                         .service(admin::blog_controller::blogs)
                         .service(admin::blog_controller::visibility)
                         .service(admin::blog_controller::top)
-                        .service(admin::blog_controller::recommend),
+                        .service(admin::blog_controller::recommend)
+                        .service(admin::blog_controller::category_and_tag),
                 )
                 .default_service(web::to(index_controller::default))
         })
