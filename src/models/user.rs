@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
  * @LastEditTime: 2024-05-12 23:18:00
  */
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub(crate) struct User {
+pub struct User {
     id: u16,
     username: String,    //用户名
     password: String,    //密码

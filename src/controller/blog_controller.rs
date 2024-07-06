@@ -5,7 +5,7 @@ use actix_web::http::header;
 use actix_web::web::{Json, Query};
 use actix_web::{routes, HttpResponse, Responder};
 use rbs::{to_value, Value};
-use service::blog_service;
+use service::BlogService;
 use std::collections::HashMap;
 
 //按置顶、创建时间排序 分页查询博客简要信息列表
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 pub async fn blogs(params: Query<SearchRequest>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
     let page =
-        blog_service::get_blog_list_by_is_published(Some(params.get_page_num() as u64)).await;
+        BlogService::get_blog_list_by_is_published(Some(params.get_page_num() as u64)).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok()
@@ -38,7 +38,7 @@ pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
             0
         }
     };
-    let blog = blog_service::get_by_id(id).await;
+    let blog = BlogService::get_by_id(id).await;
     let result = Result::new(200, "请求成功".to_string(), blog);
     HttpResponse::Ok()
         .insert_header(header::ContentType(mime::APPLICATION_JSON))
@@ -66,7 +66,7 @@ pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder 
             1
         }
     };
-    let page = blog_service::get_by_name(category_name, page).await;
+    let page = BlogService::get_by_name(category_name, page).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok()
@@ -95,7 +95,7 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
             1
         }
     };
-    let page = blog_service::get_by_tag_name(tag_name, page).await;
+    let page = BlogService::get_by_tag_name(tag_name, page).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok()
@@ -110,7 +110,7 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
 #[post("/checkBlogPassword")]
 pub async fn check_blog_password(data: Json<SearchRequest>) -> impl Responder {
     if data.get_blog_id() > 0 {
-        let blog_info = blog_service::get_by_id(data.get_blog_id()).await;
+        let blog_info = BlogService::get_by_id(data.get_blog_id()).await;
         if let Some(blog_info) = &blog_info {
             if let Some(password) = &blog_info.password {
                 if *password == data.get_password() {

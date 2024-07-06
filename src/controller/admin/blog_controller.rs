@@ -1,4 +1,4 @@
-use crate::service::{blog_service, category_service};
+use crate::service::{BlogService, CategoryService};
 use crate::{
     middleware::AppClaims,
     models::{vo::blog_visibility::BlogVisibility, vo::page_request::SearchRequest, Result},
@@ -17,8 +17,8 @@ use rbs::value::map::ValueMap;
 #[get("/blogs")]
 pub async fn blogs(query: Query<SearchRequest>, _: Authenticated<AppClaims>) -> impl Responder {
     let mut map = ValueMap::new();
-    let page = blog_service::get_blog_all_page(&query.0).await;
-    let categories = category_service::get_categories().await;
+    let page = BlogService::get_blog_all_page(&query.0).await;
+    let categories = CategoryService::get_categories().await;
     map.insert(to_value!("blogs"), to_value!(page));
     map.insert(to_value!("categories"), to_value!(categories));
     Result::ok("请求成功".to_string(), Some(to_value!(map))).ok_json()
@@ -37,7 +37,7 @@ pub async fn visibility(
     let id = path.into_inner();
     query.set_id(id as u32);
 
-    let row = blog_service::update_visibility(&query).await;
+    let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
     } else {
@@ -48,7 +48,7 @@ pub async fn visibility(
 #[routes]
 #[put("/blog/top")]
 pub async fn top(query: web::Query<BlogVisibility>, _: Authenticated<AppClaims>) -> impl Responder {
-    let row = blog_service::update_visibility(&query).await;
+    let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
     } else {
@@ -62,7 +62,7 @@ pub async fn recommend(
     query: web::Query<BlogVisibility>,
     _: Authenticated<AppClaims>,
 ) -> impl Responder {
-    let row = blog_service::update_visibility(&query).await;
+    let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
     } else {

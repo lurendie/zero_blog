@@ -4,7 +4,7 @@ use actix_web::{get, http::header, web::Query, HttpResponse, Responder};
 use rbatis::IPageRequest;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
-use crate::service::moment_service;
+use crate::service::MomentService;
 
 use crate::models::vo::result::Result;
 
@@ -19,7 +19,7 @@ pub(crate) async fn moments(params: Query<HashMap<String, String>>) -> impl Resp
     }else {
         page=1;
     }
-    let page =moment_service::get_moments(page).await;
+    let page =MomentService::get_moments(page).await;
     let mut data:ValueMap=ValueMap::new();
     data.insert(to_value!("list"), to_value!(&page.records));
     data.insert(to_value!("totalPage"), to_value!(&page.pages()));
