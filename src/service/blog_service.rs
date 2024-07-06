@@ -333,14 +333,14 @@ impl BlogService {
         let mut map: ValueMap = ValueMap::new();
         let mut page_list = BlogDao::get_blog_all_page(page).await;
         for item in page_list.get_records_mut() {
-        if item.get_password().is_none() {
-            item.set_password(Some(""));
-        }
+            if item.get_password().is_none() {
+                item.set_password(Some(""));
+            }
             item.set_category(Some(
-            CategoryDao::get_by_id(item.get_category_id())
-                .await
-                .unwrap(),
-        ));
+                CategoryDao::get_by_id(item.get_category_id())
+                    .await
+                    .unwrap(),
+            ));
         }
         map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
         map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
@@ -351,14 +351,14 @@ impl BlogService {
         map
     }
 
-//根据ID查找博文
-pub async fn update_visibility(v: &BlogVisibility) -> bool {
-    let ok = BlogVisibility::update_by_column(&RBATIS.acquire().await.unwrap(), v, "id")
-        .await
-        .is_ok();
-    ok
+    //根据ID查找博文
+    pub async fn update_visibility(v: &BlogVisibility) -> bool {
+        let ok = BlogVisibility::update_by_column(&RBATIS.acquire().await.unwrap(), v, "id")
+            .await
+            .is_ok();
+        ok
+    }
 }
-
 
 #[cfg(test)]
 mod tests {
