@@ -1,8 +1,7 @@
 use rbs::value::map::ValueMap;
 
-use crate::service::{blog_service, category_service, CommentService};
+use crate::service::{BlogService, CategoryService, CommentService, TagService};
 
-use super::tag_service;
 /**
  * DashboardService 仪表盘
  */
@@ -13,7 +12,7 @@ impl DashboardService {
      * 获取博文总数
      */
     pub async fn get_blog_count() -> i32 {
-        blog_service::get_blog_count().await
+        BlogService::get_blog_count().await
     }
     /**
      * 获取评论总数
@@ -26,7 +25,7 @@ impl DashboardService {
      */
     pub async fn get_categorys_count() -> ValueMap {
         //获取分类博文数量
-        category_service::get_categorys_count().await
+        CategoryService::get_categorys_count().await
     }
 
     /**
@@ -34,6 +33,6 @@ impl DashboardService {
      */
     pub async fn get_tags_count() -> ValueMap {
         //获取分类博文数量
-        tag_service::get_tags_count().await
+        TagService::get_tags_count().await
     }
 }
