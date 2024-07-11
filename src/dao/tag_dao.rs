@@ -1,17 +1,18 @@
+use crate::models::dto::tag_dto::TagVO;
 use crate::models::tag::Tag;
 use crate::rbatis::RBATIS;
 
 pub struct TagDao;
 impl TagDao {
-    pub async fn get_list() -> Result<Vec<Tag>, rbatis::Error> {
+    pub async fn get_list() -> Result<Vec<TagVO>, rbatis::Error> {
         let sql = format!(
             "
             select
-            tag.id as id,tag_name as name,color
+            tag.id as id,tag_name ,color
             from tag
             "
         );
-        let tags: Result<Vec<Tag>, rbatis::Error> = RBATIS.query_decode(&sql, vec![]).await;
+        let tags: Result<Vec<TagVO>, rbatis::Error> = RBATIS.query_decode(&sql, vec![]).await;
         tags
     }
 

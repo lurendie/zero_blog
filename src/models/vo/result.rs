@@ -30,8 +30,8 @@ impl<T> Result<T> {
     pub fn ok(msg: String, data: Option<T>) -> Result<T> {
         Result {
             code: 200,
-            msg: msg,
-            data: data,
+            msg,
+            data,
         }
     }
 
@@ -39,7 +39,7 @@ impl<T> Result<T> {
     pub fn ok_no_data(msg: String) -> Result<T> {
         Result {
             code: 200,
-            msg: msg,
+            msg,
             data: None,
         }
     }
@@ -47,7 +47,7 @@ impl<T> Result<T> {
     pub fn error(msg: String) -> Result<T> {
         Result {
             code: 500,
-            msg: msg,
+            msg,
             data: None,
         }
     }

@@ -2,7 +2,9 @@ use crate::constant::blog_info_constants;
 use crate::constant::redis_key_constants;
 use crate::dao::BlogDao;
 use crate::dao::{CategoryDao, TagDao};
+use crate::models::dto::blog_dto::BlogDto;
 use crate::models::vo::blog_visibility::BlogVisibility;
+use crate::models::vo::blog_vo::BlogVO;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::rbatis::RBATIS;
@@ -13,6 +15,9 @@ use rbs::to_value;
 use rbs::value::map::ValueMap;
 use rbs::Value;
 use std::collections::HashMap;
+
+use super::BlogTagService;
+use super::TagService;
 
 pub struct BlogService;
 
@@ -73,7 +78,9 @@ impl BlogService {
         }
         map
     }
-    ///随机文章
+    /**
+     * 获取随机文章
+     */
     pub async fn get_blog_list_random() -> Vec<Value> {
         //1.查询Redis 缓存数据
         let redis_cache =
@@ -135,7 +142,9 @@ impl BlogService {
         }
     }
 
-    //newBlog
+    /**
+     * 获取最新文章
+     */
     pub async fn get_blog_list_new() -> Vec<Value> {
         //1.查询Redis 缓存数据
         let redis_cache =
@@ -320,14 +329,14 @@ impl BlogService {
     }
 
     /**
-     * count Blogs
+     * 所有文章总数(包含隐藏) -后台
      */
     pub async fn get_blog_count() -> i32 {
         BlogDao::get_blog_count().await.unwrap_or_default()
     }
 
     /**
-     * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。
+     * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。 -后台
      */
     pub async fn get_blog_all_page(page: &SearchRequest) -> ValueMap {
         let mut map: ValueMap = ValueMap::new();
@@ -351,12 +360,100 @@ impl BlogService {
         map
     }
 
-    //根据ID查找博文
+    //根据ID查找博文 - 后台
     pub async fn update_visibility(v: &BlogVisibility) -> bool {
         let ok = BlogVisibility::update_by_column(&RBATIS.acquire().await.unwrap(), v, "id")
             .await
             .is_ok();
         ok
+    }
+    /**
+     * 获取id的文章 -后台
+     */
+    pub(crate) async fn get_blog_dto(id: u16) -> Option<BlogDto> {
+        let list =
+            BlogDto::get_blog(&RBATIS.acquire().await.unwrap(), id.to_string().as_str()).await;
+
+        match list {
+            Ok(mut blogs) => {
+                if !blogs.is_empty() {
+                    let mut blog = blogs.pop().expect("异常");
+                    //分类
+                    blog.set_category(Some(
+                        CategoryDao::get_by_id(blog.get_category_id())
+                            .await
+                            .unwrap(),
+                    ));
+                    //todo 标签
+                    let mut tags = vec![];
+                    let tags_id = TagService::get_tags_by_blog_id(blog.get_id()).await;
+                    for id in tags_id {
+                        let tag = TagService::get_tags_by_id(id).await;
+                        tags.push(tag)
+                    }
+                    blog.set_tags(Some(tags));
+                    return Some(blog);
+                }
+                None
+            }
+
+            Err(e) => {
+                log::error!("{:?}", e);
+                None
+            }
+        }
+    }
+    /**
+     * 更新文章
+     */
+    pub(crate) async fn update_blog_dto(query: BlogVO) -> bool {
+        //开启事务
+        let mut tx = RBATIS.acquire_begin().await.unwrap();
+        //新增更新文章
+        let blog_ok;
+        if query.get_id() == 0 {
+            blog_ok = BlogVO::insert(&tx, &query).await.is_ok();
+        } else {
+            blog_ok = BlogVO::update_by_column(&tx, &query, "id").await.is_ok();
+        }
+        //标签 先获取新数据(从本次请求query中获取)
+        let add_tags = query.get_tag_list().unwrap();
+        //标签 获取旧数据(从数据库current_blog中获取)
+        let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
+        //新旧数据对比 去除重复 新数据新增 旧数据删除
+        let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
+        //更新添加标签
+        let add_tags_ok = BlogTagService::inser_tags(add, query.get_id(), &mut tx).await;
+        //更新删除标签
+        let remove_tags_ok = BlogTagService::remove_tags(remove, query.get_id(), &mut tx).await;
+        if blog_ok && add_tags_ok && remove_tags_ok {
+            //提交事务
+            tx.commit().await.unwrap();
+        } else {
+            //回滚事务
+            tx.rollback().await.unwrap();
+        }
+        //返回结果
+        blog_ok && add_tags_ok && remove_tags_ok
+    }
+
+    //比对数组差异并返回
+    pub fn array_diff(arr1: Vec<u16>, arr2: Vec<u16>) -> (Vec<u16>, Vec<u16>) {
+        let mut add_result = Vec::new();
+        let mut delete_result = Vec::new();
+        //新数据 剔除重复，存在即新增
+        for item in &arr1 {
+            if !arr2.contains(item) {
+                add_result.push(item.clone());
+            }
+        }
+        //旧数据 剔除重复，存在即删除
+        for item in &arr2 {
+            if !arr1.contains(item) {
+                delete_result.push(item.clone());
+            }
+        }
+        (add_result, delete_result)
     }
 }
 
@@ -364,10 +461,27 @@ impl BlogService {
 mod tests {
     use rbatis::rbdc::DateTime;
 
+    use crate::service::BlogService;
+
     #[test]
     pub(crate) fn test_datetime() {
         let time = DateTime::now().format("YYYY-MM-DD hh:mm:ss");
         println!("{:?}", time)
         //stdout "2024-05-18 12:46:22"
     }
+
+    //毕竟两个数组的相同数并剔除重复
+    #[test]
+    pub(crate) fn test_array_diff() {
+        let add = vec![1, 2, 3, 4, 5];
+        let remove = vec![2, 3, 4, 5];
+        let (add, delete) = BlogService::array_diff(add, remove);
+        println!("add : {:?}, delete : {:?}", add, delete);
+        //assert_eq!(add, vec![]);
+        //assert_eq!(delete, vec![]);
+    }
+
+    //stdout add : [6], delete : []
+    //stdout ["a", "d", "e", "f"]
+    //stdout add : [], delete : [1, 2, 3, 4, 5, 6]
 }

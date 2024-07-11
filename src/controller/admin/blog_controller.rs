@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::models::vo::blog_vo::BlogVO;
 use crate::service::{BlogService, CategoryService, TagService};
 use crate::{
     middleware::AppClaims,
@@ -15,15 +16,16 @@ use actix_web::{
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
-#[routes]
-#[get("/blogs")]
+#[routes] // 定义路由
+#[get("/blogs")] // 定义GET请求的路由
 pub async fn blogs(query: Query<SearchRequest>, _: Authenticated<AppClaims>) -> impl Responder {
-    let mut map = ValueMap::new();
-    let page = BlogService::get_blog_all_page(&query.0).await;
-    let categories = CategoryService::get_categories().await;
-    map.insert(to_value!("blogs"), to_value!(page));
-    map.insert(to_value!("categories"), to_value!(categories));
-    Result::ok("请求成功".to_string(), Some(to_value!(map))).ok_json()
+    // 定义异步函数，返回一个实现了Responder trait的类型
+    let mut map = ValueMap::new(); // 创建一个ValueMap类型的变量
+    let page = BlogService::get_blog_all_page(&query.0).await; // 调用BlogService的get_blog_all_page方法，传入query.0，获取博客分页数据
+    let categories = CategoryService::get_categories().await; // 调用CategoryService的get_categories方法，获取分类数据
+    map.insert(to_value!("blogs"), to_value!(page)); // 将博客分页数据插入到map中
+    map.insert(to_value!("categories"), to_value!(categories)); // 将分类数据插入到map中
+    Result::ok("请求成功".to_string(), Some(to_value!(map))).ok_json() // 返回一个包含map的JSON响应
 }
 
 /**
@@ -49,7 +51,7 @@ pub async fn visibility(
 
 #[routes]
 #[put("/blog/top")]
-pub async fn top(query: web::Query<BlogVisibility>, _: Authenticated<AppClaims>) -> impl Responder {
+pub async fn top(query: Query<BlogVisibility>, _: Authenticated<AppClaims>) -> impl Responder {
     let row = BlogService::update_visibility(&query).await;
     if row {
         Result::ok_no_data("更新成功".to_string()).ok_json()
@@ -61,7 +63,7 @@ pub async fn top(query: web::Query<BlogVisibility>, _: Authenticated<AppClaims>)
 #[routes]
 #[put("/blog/recommend")]
 pub async fn recommend(
-    query: web::Query<BlogVisibility>,
+    query: Query<BlogVisibility>,
     _: Authenticated<AppClaims>,
 ) -> impl Responder {
     let row = BlogService::update_visibility(&query).await;
@@ -83,4 +85,40 @@ pub async fn category_and_tag() -> impl Responder {
     map.insert("categories".to_string(), to_value!(category_list));
     map.insert("tags".to_string(), to_value!(tag_list));
     Result::ok("请求成功!".to_string(), Some(to_value!(map))).ok_json()
+}
+
+/**
+ * 根据ID查询博文
+ */
+#[routes]
+#[get("/blog")]
+pub async fn blog(query: Query<HashMap<String, String>>) -> impl Responder {
+    let id = query.get("id").unwrap().parse::<u16>().unwrap();
+    let blog = BlogService::get_blog_dto(id).await;
+    Result::ok("请求成功!".to_string(), Some(to_value!(blog))).ok_json()
+}
+
+/**
+ * 修改文章
+ */
+#[routes]
+#[put("/blog")]
+pub async fn update_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> impl Responder {
+    let row = BlogService::update_blog_dto(query.into_inner()).await;
+    if row {
+        Result::ok_no_data("更新成功".to_string()).ok_json()
+    } else {
+        Result::error("更新失败".to_string()).error_json()
+    }
+}
+
+#[routes]
+#[post("/blog")]
+pub async fn create_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> impl Responder {
+    let row = BlogService::update_blog_dto(query.into_inner()).await;
+    if row {
+        Result::ok_no_data("更新成功".to_string()).ok_json()
+    } else {
+        Result::error("更新失败".to_string()).error_json()
+    }
 }

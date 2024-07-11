@@ -1,5 +1,6 @@
 mod about_service;
 mod blog_service;
+mod blog_tag_service;
 mod category_service;
 mod comments_service;
 mod dashboard_service;
@@ -12,6 +13,7 @@ mod user_service;
 
 pub use about_service::AboutService;
 pub use blog_service::BlogService;
+pub use blog_tag_service::BlogTagService;
 pub use category_service::CategoryService;
 pub use comments_service::CommentService;
 pub use dashboard_service::DashboardService;
