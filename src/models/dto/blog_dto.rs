@@ -50,7 +50,7 @@ pub struct BlogDto {
     #[serde(deserialize_with = "bool_from_int", rename(deserialize = "is_top"))]
     top: bool,
     password: Option<String>,
-    user_id: u16,
+    user_id: Option<u16>,
     #[serde(rename(deserialize = "category_id"), skip_serializing)]
     //跳过该字段，不进行序列化操作。
     category_id: u16,
@@ -83,9 +83,12 @@ impl_select_page!(BlogDto{select_page_by_name(name:&str) =>"
      if name == '':
        `where name != ''`"});
 
-impl_select_page!(BlogDto{select_page_blog_all(title:&str) =>"where 1=1
-if !title.is_empty():
-   `and title like #{title}`"},"blog");
+//BUG 方法无法正确排序返回结果
+impl_select_page!(BlogDto{select_page_blog_all(title:&str) =>"where 1=1 
+ if !title.is_empty():
+   `and title like concat('%', #{title}, '%')` 
+ ORDER BY create_time DESC
+"},"blog");
 
 impl_select!(BlogDto{get_blog(id:&str)=>"`where blog.id = #{id}`"},"blog");
 
@@ -148,7 +151,7 @@ impl BlogDto {
         self.password.as_deref()
     }
     pub fn get_user_id(&self) -> u16 {
-        self.user_id
+        self.user_id.unwrap_or(0)
     }
     pub fn get_category_id(&self) -> u16 {
         self.category_id
@@ -222,7 +225,7 @@ impl BlogDto {
         self
     }
     pub fn set_user_id(&mut self, user_id: u16) -> &mut Self {
-        self.user_id = user_id;
+        self.user_id = Some(user_id);
         self
     }
     pub fn set_category_id(&mut self, category_id: u16) -> &mut Self {

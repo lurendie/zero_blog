@@ -5,7 +5,7 @@ use crate::models::vo::{blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::models::{category::Category, tag::Tag};
 use crate::rbatis::RBATIS;
 
-use rbatis::{Error, Page, PageRequest};
+use rbatis::{Error, IPage, Page, PageRequest};
 use rbs::to_value;
 
 pub struct BlogDao;
@@ -255,9 +255,9 @@ impl BlogDao {
             })
     }
     /**
-     * 获取全部博文并分页返回，支持按标题模糊查询
+     * 获取全部博文并分页返回，支持按标题模糊查询(废弃)
      */
-    pub(crate) async fn get_blog_all_page(page: &SearchRequest) -> Page<BlogDto> {
+    pub(crate) async fn _get_blog_all_page(page: &SearchRequest) -> Page<BlogDto> {
         BlogDto::select_page_blog_all(
             &RBATIS.acquire().await.unwrap(),
             &PageRequest::new(page.get_page_num() as u64, page.get_page_size() as u64),
@@ -268,6 +268,46 @@ impl BlogDao {
             log::error!("{}", e);
             Page::default()
         })
+    }
+
+    pub async fn select_page_blog_dto(page_args: &SearchRequest) -> Result<Page<BlogDto>, Error> {
+        if page_args.get_page_num() == 0 || page_args.get_page_size() == 0 {
+            return Err(Error::from("page_num 或者 page_size equels 0"));
+        }
+        let mut arg = vec![];
+        let mut sql = String::from("select * from blog where 1=1 ");
+        //拼接标题条件
+        if !page_args.get_title().is_empty() {
+            sql.insert_str(sql.len(), "and title like ? ");
+            arg.push(to_value!("%".to_string() + &page_args.get_title() + "%"));
+        }
+        //拼接分类id条件
+        if page_args.get_category_id() != 0 {
+            sql.insert_str(sql.len(), " and category_id = ? ");
+            arg.push(to_value!(page_args.get_category_id()));
+        }
+        sql.insert_str(sql.len(), " order by create_time desc limit ?,?");
+        arg.push(to_value!(((page_args.get_page_num() - 1)
+            * page_args.get_page_size())
+        .to_string()
+        .as_str()));
+        arg.push(to_value!(page_args.get_page_size()));
+        let query = RBATIS
+            .query_decode::<Vec<BlogDto>>(sql.as_str(), arg)
+            .await
+            .unwrap_or_else(|opt| {
+                log::error!("{:?}", opt);
+                vec![]
+            });
+        let total = BlogDao::get_blog_count().await.unwrap_or(0) as u64;
+        let records = query;
+        let rusult_page = Page::new(
+            page_args.get_page_num() as u64,
+            page_args.get_page_size() as u64,
+        )
+        .set_records(records)
+        .set_total(total);
+        Ok(rusult_page)
     }
 }
 
@@ -296,5 +336,16 @@ mod test {
         date.insert(4, '年');
         date.insert(10, '日');
         println!("{}", date);
+    }
+
+    #[test]
+    fn test_sql() {
+        let title = "123";
+        let mut sql = String::from("select * from blog where 1=1 ");
+        if !title.is_empty() {
+            sql.insert_str(sql.len(), "title = ?");
+        }
+        sql.insert_str(sql.len(), " order by create_time desc");
+        dbg!(sql);
     }
 }

@@ -21,6 +21,8 @@ pub struct SearchRequest {
     password: Option<String>,
     #[serde(rename = "title")]
     title: Option<String>,
+    #[serde(rename = "categoryId")]
+    category_id: Option<u16>,
 }
 
 impl SearchRequest {
@@ -41,5 +43,37 @@ impl SearchRequest {
     }
     pub fn get_title(&self) -> String {
         self.title.clone().unwrap_or_default()
+    }
+
+    pub fn set_title(&mut self, title: Option<String>) {
+        self.title = title;
+    }
+
+    pub fn set_page_num(&mut self, page_num: Option<u16>) {
+        self.page_num = page_num;
+    }
+
+    pub fn set_page_size(&mut self, page_size: Option<u16>) {
+        self.page_size = page_size;
+    }
+
+    pub fn set_blog_id(&mut self, blog_id: Option<u16>) {
+        self.blog_id = blog_id;
+    }
+
+    pub fn set_page(&mut self, page: Option<u16>) {
+        self.page = page;
+    }
+
+    pub fn set_password(&mut self, password: Option<String>) {
+        self.password = password;
+    }
+
+    pub fn set_category_id(&mut self, category_id: u16) {
+        self.category_id = Some(category_id);
+    }
+
+    pub fn get_category_id(&self) -> u16 {
+        self.category_id.unwrap_or(0)
     }
 }

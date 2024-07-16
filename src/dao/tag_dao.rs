@@ -1,5 +1,4 @@
 use crate::models::dto::tag_dto::TagVO;
-use crate::models::tag::Tag;
 use crate::rbatis::RBATIS;
 
 pub struct TagDao;
@@ -19,19 +18,19 @@ impl TagDao {
     /**
      * 根据BlogId查询当前所有的云标签
      */
-    pub async fn get_blog_tags(id: u16) -> Vec<crate::models::tag::Tag> {
+    pub async fn get_blog_tags(id: u16) -> Vec<TagVO> {
         //TagList
         let sql = format!(
             "
             select
-            tag.id as id,tag_name as name,color
+            tag.id as id,tag_name ,color
             from blog_tag,tag
             where blog_tag.tag_id = tag.id and blog_tag.blog_id = {}
             ",
             id
         );
         let tags = RBATIS
-            .query_decode::<Vec<Tag>>(&*sql, vec![])
+            .query_decode::<Vec<TagVO>>(&*sql, vec![])
             .await
             .unwrap_or_else(|e| {
                 log::error!("异常:{e}");

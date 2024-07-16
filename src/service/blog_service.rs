@@ -10,6 +10,7 @@ use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog
 use crate::rbatis::RBATIS;
 use crate::service::RedisService;
 use rand::Rng;
+use rbatis::rbdc::DateTime;
 use rbatis::{IPage, IPageRequest, Page};
 use rbs::to_value;
 use rbs::value::map::ValueMap;
@@ -27,11 +28,11 @@ impl BlogService {
     ) -> HashMap<String, Value> {
         //println!("{:?}", page_num);
         let num;
-        if page_num.unwrap() == 0 {
-            num = 1;
+        if let Some(page_num) = page_num {
+            num = page_num;
         } else {
-            num = page_num.unwrap();
-        }
+            num = 1;
+        };
         //1.查询redis缓存
         let redis_cache = RedisService::get_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
@@ -338,9 +339,17 @@ impl BlogService {
     /**
      * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。 -后台
      */
-    pub async fn get_blog_all_page(page: &SearchRequest) -> ValueMap {
+    pub async fn get_blog_all_page(mut page: SearchRequest) -> ValueMap {
+        if page.get_title() == "" {
+            let _ = &page.set_title(None);
+        }
         let mut map: ValueMap = ValueMap::new();
-        let mut page_list = BlogDao::get_blog_all_page(page).await;
+        let mut page_list = BlogDao::select_page_blog_dto(&page)
+            .await
+            .unwrap_or_else(|opt| {
+                log::error!("{:?}", opt);
+                Page::new(0, 0)
+            });
         for item in page_list.get_records_mut() {
             if item.get_password().is_none() {
                 item.set_password(Some(""));
@@ -404,37 +413,93 @@ impl BlogService {
         }
     }
     /**
-     * 更新文章
+     * 添加或者更新文章
      */
-    pub(crate) async fn update_blog_dto(query: BlogVO) -> bool {
-        //开启事务
-        let mut tx = RBATIS.acquire_begin().await.unwrap();
-        //新增更新文章
-        let blog_ok;
+    pub(crate) async fn update_blog_dto(mut query: BlogVO) -> bool {
+        // 开启事务
+        let mut tx = match RBATIS.acquire_begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                log::error!("开启事务失败: {:?}", e);
+                return false;
+            }
+        };
+
+        // 新增或更新文章
         if query.get_id() == 0 {
-            blog_ok = BlogVO::insert(&tx, &query).await.is_ok();
+            query.set_create_time(DateTime::now());
+            query.set_update_time(DateTime::now());
+            let data = match BlogVO::insert(&tx, &query).await {
+                Ok(data) => data,
+                Err(e) => {
+                    log::error!("插入文章失败: {:?}", e);
+                    tx.rollback()
+                        .await
+                        .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                    return false;
+                }
+            };
+            // 获取新插入的id
+            let new_id = match data.last_insert_id {
+                Value::U64(id) => id as u16,
+                Value::U32(id) => id as u16,
+                _ => {
+                    log::error!("获取新插入的id失败");
+                    tx.rollback()
+                        .await
+                        .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                    return false;
+                }
+            };
+
+            // 更新添加标签
+            let add_tags = query.get_tag_list().unwrap_or_default();
+            if !BlogTagService::inser_tags(add_tags, new_id, &mut tx).await {
+                tx.rollback()
+                    .await
+                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                return false;
+            }
         } else {
-            blog_ok = BlogVO::update_by_column(&tx, &query, "id").await.is_ok();
+            query.set_update_time(DateTime::now());
+            if !BlogVO::update_by_column(&tx, &query, "id").await.is_ok() {
+                log::error!("更新文章失败");
+                tx.rollback()
+                    .await
+                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                return false;
+            }
+
+            // 标签处理
+            let add_tags = query.get_tag_list().unwrap_or_default();
+            let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
+            let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
+
+            if !BlogTagService::inser_tags(add, query.get_id(), &mut tx).await {
+                tx.rollback()
+                    .await
+                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                return false;
+            }
+
+            if !BlogTagService::remove_tags(remove, query.get_id(), &mut tx).await {
+                tx.rollback()
+                    .await
+                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                return false;
+            }
         }
-        //标签 先获取新数据(从本次请求query中获取)
-        let add_tags = query.get_tag_list().unwrap();
-        //标签 获取旧数据(从数据库current_blog中获取)
-        let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
-        //新旧数据对比 去除重复 新数据新增 旧数据删除
-        let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
-        //更新添加标签
-        let add_tags_ok = BlogTagService::inser_tags(add, query.get_id(), &mut tx).await;
-        //更新删除标签
-        let remove_tags_ok = BlogTagService::remove_tags(remove, query.get_id(), &mut tx).await;
-        if blog_ok && add_tags_ok && remove_tags_ok {
-            //提交事务
-            tx.commit().await.unwrap();
-        } else {
-            //回滚事务
-            tx.rollback().await.unwrap();
+
+        // 提交事务
+        if let Err(e) = tx.commit().await {
+            log::error!("提交事务失败: {:?}", e);
+            tx.rollback()
+                .await
+                .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+            return false;
         }
-        //返回结果
-        blog_ok && add_tags_ok && remove_tags_ok
+
+        true
     }
 
     //比对数组差异并返回

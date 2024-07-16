@@ -37,6 +37,7 @@ impl<T> Result<T> {
 
     //无异常返回数据
     pub fn ok_no_data(msg: String) -> Result<T> {
+        // 200 OK
         Result {
             code: 200,
             msg,
@@ -45,6 +46,7 @@ impl<T> Result<T> {
     }
 
     pub fn error(msg: String) -> Result<T> {
+        // 500 Internal Server Error
         Result {
             code: 500,
             msg,
