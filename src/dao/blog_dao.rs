@@ -33,7 +33,7 @@ impl BlogDao {
     pub async fn get_blog_list() -> Result<Vec<BlogInfo>, rbatis::Error> {
         let sql = "
         select
-             blog.id,blog.title,blog.description,blog.create_time,blog.views ,blog.words,blog.read_time,blog.password,blog.is_top
+             blog.id,blog.title,blog.description,blog.create_time,blog.views ,blog.words,blog.read_time,blog.password,blog.is_top,blog.first_picture
          from
              blog  WHERE is_published = ?";
 

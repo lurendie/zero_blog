@@ -34,4 +34,21 @@ impl BlogTagService {
         }
         true
     }
+    /**
+     * 删除某个blog的所有标签
+     */
+    pub(crate) async fn delete_tags_by_blog_id(id: u16, tx: &mut RBatisTxExecutor) -> bool {
+        let mut delete_tag = BlogTag::new();
+        delete_tag.set_blog_id(id);
+        match BlogTag::delete_by_column(tx, "blog_id", id).await {
+            Ok(_) => true,
+            Err(e) => {
+                log::error!("delete_tags_by_blog_id error: {}", e);
+                tx.rollback().await.unwrap_or_else(|e| {
+                    log::error!("rollback error: {}", e);
+                });
+                false
+            }
+        }
+    }
 }

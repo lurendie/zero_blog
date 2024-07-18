@@ -20,6 +20,8 @@ pub struct BlogInfo {
     pub is_top: bool,
     pub tags: Option<Vec<TagVO>>,
     pub category: Option<Category>,
+    #[serde(rename(serialize = "firstPicture", deserialize = "first_picture"))]
+    pub first_picture: Option<String>,
 }
 
 // impl BlogInfo {

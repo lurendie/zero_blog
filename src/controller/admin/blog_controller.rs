@@ -113,3 +113,30 @@ pub async fn create_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> im
         false => Result::error("更新失败".to_string()).error_json(),
     }
 }
+
+/**
+ * 删除文章
+ */
+#[routes]
+#[delete("/blog")]
+pub async fn delete_blog(
+    query: Query<HashMap<String, String>>,
+    _: Authenticated<AppClaims>,
+) -> impl Responder {
+    // 解析参数 id
+    let id = query
+        .get("id")
+        .unwrap_or(&"0".to_string())
+        .parse::<u16>()
+        .unwrap_or_else(|e| {
+            log::error!("parse id error : {}", e);
+            0
+        });
+    if id == 0 {
+        return Result::error("参数错误".to_string()).error_json();
+    }
+    match BlogService::delete_blog(id).await {
+        true => Result::ok_no_data("删除成功".to_string()).ok_json(),
+        false => Result::error("删除失败".to_string()).error_json(),
+    }
+}

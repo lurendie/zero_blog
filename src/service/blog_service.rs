@@ -208,8 +208,7 @@ impl BlogService {
     //根据分类名称查询博文
     pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value> {
         let mut map: HashMap<String, Value> = HashMap::new();
-        let mut page_list: Page<BlogInfo>;
-        page_list =
+        let page_list: Page<BlogInfo> =
             match BlogDao::get_by_category(name, page_num, blog_info_constants::PAGE_SIZE).await {
                 Ok(mut ok) => {
                     BlogService::bloginfo_handle(ok.get_records_mut()).await;
@@ -220,10 +219,7 @@ impl BlogService {
                     Page::new(0, 0)
                 }
             };
-        page_list.get_records_mut().iter_mut().for_each(|item| {
-            item.description = markdown::to_html(&item.description);
-            item.create_time = item.create_time.as_str()[0..19].to_string();
-        });
+
         map.insert("list".to_string(), to_value!(page_list.get_records()));
         map.insert("totalPage".to_string(), to_value!(page_list.pages()));
         map
@@ -240,22 +236,17 @@ impl BlogService {
     //根据tag名称查询博文
     pub async fn get_by_tag_name(name: String, page_num: usize) -> HashMap<String, Value> {
         let mut map: HashMap<String, Value> = HashMap::new();
-        let mut page_list: Page<BlogInfo>;
-        page_list = match BlogDao::get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await
-        {
-            Ok(mut ok) => {
-                BlogService::bloginfo_handle(ok.get_records_mut()).await;
-                ok
-            }
-            Err(e) => {
-                log::error!("BlogList查询失败:{}", e);
-                Page::new(0, 0)
-            }
-        };
-        page_list.get_records_mut().iter_mut().for_each(|item| {
-            item.description = markdown::to_html(&item.description);
-            item.create_time = item.create_time.as_str()[0..19].to_string();
-        });
+        let page_list: Page<BlogInfo> =
+            match BlogDao::get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await {
+                Ok(mut ok) => {
+                    BlogService::bloginfo_handle(ok.get_records_mut()).await;
+                    ok
+                }
+                Err(e) => {
+                    log::error!("BlogList查询失败:{}", e);
+                    Page::new(0, 0)
+                }
+            };
         map.insert("list".to_string(), to_value!(page_list.get_records()));
         map.insert("totalPage".to_string(), to_value!(page_list.pages()));
         map
@@ -311,7 +302,11 @@ impl BlogService {
     async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
         for item in list.iter_mut() {
             let id = item.id.unwrap();
-            item.category = Some(CategoryDao::get_by_bloginfo_id(id).await.unwrap());
+            item.category = Some(
+                CategoryDao::get_by_bloginfo_id(id)
+                    .await
+                    .unwrap_or_default(),
+            );
             if let Some(password) = &item.password {
                 //如果password!=null
                 if *password != "" {
@@ -475,14 +470,10 @@ impl BlogService {
             let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
             let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
 
-            if !BlogTagService::inser_tags(add, query.get_id(), &mut tx).await {
-                tx.rollback()
-                    .await
-                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                return false;
-            }
-
-            if !BlogTagService::remove_tags(remove, query.get_id(), &mut tx).await {
+            // 新增标签或者删除标签失败则进行事务回滚
+            if !BlogTagService::inser_tags(add, query.get_id(), &mut tx).await
+                || !BlogTagService::remove_tags(remove, query.get_id(), &mut tx).await
+            {
                 tx.rollback()
                     .await
                     .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
@@ -519,6 +510,36 @@ impl BlogService {
             }
         }
         (add_result, delete_result)
+    }
+
+    //删除Blog
+    pub async fn delete_blog(id: u16) -> bool {
+        let mut tx = match RBATIS.acquire_begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                log::error!("开启事务失败: {:?}", e);
+                return false;
+            }
+        };
+        //删除文章或者标签失败则进行事务回滚
+        if !BlogVO::delete_by_column(&tx, "id", id).await.is_ok()
+            || !BlogTagService::delete_tags_by_blog_id(id, &mut tx).await
+        {
+            log::error!("删除文章失败");
+            tx.rollback()
+                .await
+                .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+            return false;
+        }
+
+        if let Err(e) = tx.commit().await {
+            log::error!("提交事务失败: {:?}", e);
+            tx.rollback()
+                .await
+                .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+            return false;
+        }
+        true
     }
 }
 
