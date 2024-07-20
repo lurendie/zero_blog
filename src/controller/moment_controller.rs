@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use actix_web::{get, http::header, web::Query, HttpResponse, Responder};
+use actix_web::{get, web::Query, HttpResponse, Responder};
 use rbatis::IPageRequest;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
@@ -24,5 +24,5 @@ pub(crate) async fn moments(params: Query<HashMap<String, String>>) -> impl Resp
     data.insert(to_value!("list"), to_value!(&page.records));
     data.insert(to_value!("totalPage"), to_value!(&page.pages()));
     let result = Result::ok("请求成功".to_string(), Some(data));
-    HttpResponse::Ok().insert_header(header::ContentType(mime::APPLICATION_JSON)).json(result)
+    HttpResponse::Ok().json(result)
 }

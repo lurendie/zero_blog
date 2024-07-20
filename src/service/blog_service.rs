@@ -24,19 +24,13 @@ pub struct BlogService;
 
 impl BlogService {
     pub(crate) async fn get_blog_list_by_is_published(
-        page_num: Option<u64>,
+        page_num: u64,
     ) -> HashMap<String, Value> {
-        //println!("{:?}", page_num);
-        let num;
-        if let Some(page_num) = page_num {
-            num = page_num;
-        } else {
-            num = 1;
-        };
+    
         //1.查询redis缓存
         let redis_cache = RedisService::get_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
-            num.to_string(),
+            page_num.to_string(),
         )
         .await;
         //2.缓存不未Null则返回返回
@@ -44,14 +38,14 @@ impl BlogService {
             log::info!(
                 "key:{} page:{} 数据存在",
                 redis_key_constants::HOME_BLOG_INFO_LIST,
-                num
+                page_num
             );
             return redis_cache;
         }
         //3.查询数据库
         let mut map: HashMap<String, Value> = HashMap::new();
         let page_list: Page<BlogInfo>;
-        page_list = match BlogDao::get_blog_pages(num, blog_info_constants::PAGE_SIZE).await {
+        page_list = match BlogDao::get_blog_pages(page_num, blog_info_constants::PAGE_SIZE).await {
             Ok(mut ok) => {
                 BlogService::bloginfo_handle(ok.get_records_mut()).await;
                 ok
@@ -67,12 +61,12 @@ impl BlogService {
         log::info!(
             "key:{} page:{} 数据不存在",
             redis_key_constants::HOME_BLOG_INFO_LIST,
-            num
+            page_num
         );
         if !page_list.get_records().is_empty() {
             let _ = RedisService::set_hash_key(
                 redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
-                num.to_string(),
+                page_num.to_string(),
                 &map,
             )
             .await;

@@ -124,15 +124,11 @@ pub async fn delete_blog(
     _: Authenticated<AppClaims>,
 ) -> impl Responder {
     // 解析参数 id
-    let id = query
-        .get("id")
-        .unwrap_or(&"0".to_string())
-        .parse::<u16>()
-        .unwrap_or_else(|e| {
-            log::error!("parse id error : {}", e);
-            0
-        });
-    if id == 0 {
+    let id = match query.get("id") {
+        Some(id) => id.parse::<u16>().unwrap_or_default(),
+        None => 0,
+    };
+    if id <= 0 {
         return Result::error("参数错误".to_string()).error_json();
     }
     match BlogService::delete_blog(id).await {

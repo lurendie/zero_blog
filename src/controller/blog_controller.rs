@@ -1,7 +1,6 @@
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::result::Result;
 use crate::service;
-use actix_web::http::header;
 use actix_web::web::{Json, Query};
 use actix_web::{routes, HttpResponse, Responder};
 use rbs::{to_value, Value};
@@ -10,16 +9,17 @@ use std::collections::HashMap;
 
 //按置顶、创建时间排序 分页查询博客简要信息列表
 #[routes]
-#[options("/site")]
+//#[options("/site")]
 #[get("/blogs")]
-pub async fn blogs(params: Query<SearchRequest>) -> impl Responder {
+pub async fn blogs(mut params: Query<SearchRequest>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
-    let page = BlogService::get_blog_list_by_is_published(Some(params.get_page_num() as u64)).await;
+    if params.get_page_num() <= 0 {
+        params.set_page_num(Some(1));
+    };
+    let page = BlogService::get_blog_list_by_is_published(params.get_page_num() as u64).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
-    HttpResponse::Ok()
-        .insert_header(header::ContentType(mime::APPLICATION_JSON))
-        .json(result)
+    HttpResponse::Ok().json(result)
 }
 #[routes]
 #[get("/blog")]
@@ -28,14 +28,13 @@ pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
         Some(id) => id.parse().expect("转换失败"),
         None => 0,
     };
+    //如果id<=0，则返回参数有误的错误信息
     if id <= 0 {
         return Result::error("参数有误!".to_string()).error_json();
     }
     let blog = BlogService::get_by_id(id).await;
     let result = Result::new(200, "请求成功".to_string(), blog);
-    HttpResponse::Ok()
-        .insert_header(header::ContentType(mime::APPLICATION_JSON))
-        .json(result)
+    HttpResponse::Ok().json(result)
 }
 #[routes]
 #[get("/category")]
@@ -44,11 +43,12 @@ pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder 
         Some(category_name) => category_name.clone(),
         None => String::new(),
     };
+    //如果没有page_num参数，则默认取第一页
     let page: usize = match params.get("pageNum") {
         Some(page) => page.parse().expect("转换失败"),
-        None => 0,
+        None => 1,
     };
-    if category_name.is_empty() || page <= 0 {
+    if category_name.is_empty() {
         return Result::error("参数有误!".to_string()).error_json();
     }
     let page = BlogService::get_by_name(category_name, page).await;
@@ -63,19 +63,18 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
         Some(category_name) => category_name.clone(),
         None => String::new(),
     };
+    //如果没有page_num参数，则默认取第一页
     let page: usize = match params.get("pageNum") {
         Some(page) => page.parse().expect("转换失败"),
-        None => 0,
+        None => 1,
     };
-    if tag_name.is_empty() || page <= 0 {
+    if tag_name.is_empty() {
         return Result::error("参数有误!".to_string()).error_json();
     }
     let page = BlogService::get_by_tag_name(tag_name, page).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
-    HttpResponse::Ok()
-        .insert_header(header::ContentType(mime::APPLICATION_JSON))
-        .json(result)
+    HttpResponse::Ok().json(result)
 }
 
 /**
