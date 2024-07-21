@@ -1,4 +1,5 @@
-use crate::constant::blog_info_constants;
+use crate::constant::blog_info_constants::RANDOM_BLOG_LIMIT_NUM;
+use crate::constant::blog_info_constants::{self, NEW_BLOG_PAGE_SIZE};
 use crate::constant::redis_key_constants;
 use crate::dao::BlogDao;
 use crate::dao::{CategoryDao, TagDao};
@@ -23,10 +24,7 @@ use super::TagService;
 pub struct BlogService;
 
 impl BlogService {
-    pub(crate) async fn get_blog_list_by_is_published(
-        page_num: u64,
-    ) -> HashMap<String, Value> {
-    
+    pub(crate) async fn get_blog_list_by_is_published(page_num: u64) -> HashMap<String, Value> {
         //1.查询redis缓存
         let redis_cache = RedisService::get_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
@@ -97,27 +95,17 @@ impl BlogService {
         match BlogDao::get_blog_list().await {
             Ok(mut list) => {
                 BlogService::bloginfo_handle(&mut list).await;
+                let mut ids = vec![];
                 let mut result = vec![];
-                //计数
-                let mut count = 0;
                 let mut rng = rand::thread_rng();
-                let _ = list
-                    .clone()
-                    .into_iter()
-                    .filter(|_| {
-                        //随机RANDOM_BLOG_LIMIT_NUM次,超过则不在进行添加的
-                        if count < blog_info_constants::RANDOM_BLOG_LIMIT_NUM {
-                            count += 1;
-                            list[rng.gen_range(1..list.len())].id.expect("异常") as usize > 0
-                        } else {
-                            false
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .iter()
-                    .for_each(|item| {
-                        result.push(to_value!(item));
-                    });
+                //随机获取文章ID并且去重
+                while ids.len() < RANDOM_BLOG_LIMIT_NUM {
+                    let index = rng.gen_range(0..(list.len() - 1));
+                    if !ids.contains(&index) {
+                        ids.push(index);
+                        result.push(to_value!(list[index].clone()));
+                    }
+                }
                 log::info!(
                     "key:{} 数据不存在",
                     redis_key_constants::RANDOM_BLOG_LIST.to_string()
@@ -160,26 +148,14 @@ impl BlogService {
         //2.查询数据库
         match BlogDao::get_blog_list().await {
             Ok(mut list) => {
+                //反转元素
+                list.reverse();
                 BlogService::bloginfo_handle(&mut list).await;
                 let mut result = vec![];
-                //计数
-                let mut count = 0;
-                list.clone()
-                    .into_iter()
-                    .filter(|_| {
-                        //NEW_BLOG_PAGE_SIZE,超过则不在进行添加的
-                        if count < blog_info_constants::NEW_BLOG_PAGE_SIZE {
-                            count += 1;
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .iter()
-                    .for_each(|item| {
-                        result.push(to_value!(item));
-                    });
+
+                for i in 0..NEW_BLOG_PAGE_SIZE {
+                    result.push(to_value!(list[i].clone()));
+                }
                 log::info!(
                     "key:{} 数据不存在",
                     redis_key_constants::NEW_BLOG_LIST.to_string()
@@ -271,7 +247,7 @@ impl BlogService {
                 });
             for blog in blogs {
                 let mut blog_archive = BlogArchive::new();
-                blog_archive.id = blog.id.unwrap().to_string();
+                blog_archive.id = blog.id.unwrap_or_default().to_string();
                 blog_archive.password = blog.password.unwrap_or_default();
                 blog_archive.privacy = false;
                 blog_archive.day = blog.create_time.as_str()[8..10].to_string() + "日";
@@ -346,10 +322,9 @@ impl BlogService {
             item.set_category(Some(
                 CategoryDao::get_by_id(item.get_category_id())
                     .await
-                    .unwrap(),
+                    .unwrap_or_default(),
             ));
         }
-        map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
         map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
         map.insert(to_value!("pageSize"), to_value!(page_list.page_size()));
         map.insert(to_value!("pages"), to_value!(page_list.pages()));
