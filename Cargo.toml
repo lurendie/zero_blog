@@ -40,3 +40,5 @@ rbdc-mysql = { version = "4.5" }
 rbs = { version = "4.5" }
 redis = { version = "0.25.3", features = ["tokio-comp", "json"] } #redis 异步IO
 actix-jwt-session = "1.0.5"
+regex = "1"
+

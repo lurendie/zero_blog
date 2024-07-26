@@ -256,11 +256,10 @@ impl BlogDao {
     id,tag_name as name,color
     from
     tag
-     where tag_name = \"{}\"
- ",
-            name
+     where tag_name = ?
+ "
         );
-        let args = vec![];
+        let args = vec![to_value!(name)];
         let tag_query = RBATIS.query_decode::<Tag>(&*sql, args).await;
         let tag = tag_query.unwrap_or_else(|e| {
             println!("{:?}", e);

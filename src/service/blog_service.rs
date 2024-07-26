@@ -7,12 +7,14 @@ use crate::models::dto::blog_dto::BlogDto;
 use crate::models::vo::blog_visibility::BlogVisibility;
 use crate::models::vo::blog_vo::BlogVO;
 use crate::models::vo::page_request::SearchRequest;
+use crate::models::vo::search_blog::SearchBlog;
 use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
+use crate::rbatis::get_conn;
 use crate::rbatis::RBATIS;
 use crate::service::RedisService;
 use rand::Rng;
-use rbatis::rbdc::DateTime;
-use rbatis::{IPage, IPageRequest, Page};
+use rbatis::IPage;
+use rbatis::{rbdc::DateTime, IPageRequest, Page};
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 use rbs::Value;
@@ -98,12 +100,20 @@ impl BlogService {
                 let mut ids = vec![];
                 let mut result = vec![];
                 let mut rng = rand::thread_rng();
-                //随机获取文章ID并且去重
-                while ids.len() < RANDOM_BLOG_LIMIT_NUM {
-                    let index = rng.gen_range(0..(list.len() - 1));
-                    if !ids.contains(&index) {
-                        ids.push(index);
-                        result.push(to_value!(list[index].clone()));
+
+                if list.len() < RANDOM_BLOG_LIMIT_NUM {
+                    for i in 0..(list.len() - 1) {
+                        ids.push(i);
+                        result.push(to_value!(list[i].clone()));
+                    }
+                } else {
+                    //随机获取文章ID并且去重
+                    while ids.len() < RANDOM_BLOG_LIMIT_NUM {
+                        let index = rng.gen_range(0..(list.len() - 1));
+                        if !ids.contains(&index) {
+                            ids.push(index);
+                            result.push(to_value!(list[index].clone()));
+                        }
                     }
                 }
                 log::info!(
@@ -152,9 +162,15 @@ impl BlogService {
                 list.reverse();
                 BlogService::bloginfo_handle(&mut list).await;
                 let mut result = vec![];
-
-                for i in 0..NEW_BLOG_PAGE_SIZE {
-                    result.push(to_value!(list[i].clone()));
+                //如果文章数量小于NEW_BLOG_PAGE_SIZE 则直接返回
+                if list.len() < NEW_BLOG_PAGE_SIZE {
+                    for i in 0..(list.len() - 1) {
+                        result.push(to_value!(list[i].clone()));
+                    }
+                } else {
+                    for i in 0..NEW_BLOG_PAGE_SIZE {
+                        result.push(to_value!(list[i].clone()));
+                    }
                 }
                 log::info!(
                     "key:{} 数据不存在",
@@ -458,7 +474,6 @@ impl BlogService {
                 .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
             return false;
         }
-
         true
     }
 
@@ -510,13 +525,59 @@ impl BlogService {
         }
         true
     }
+
+    /**
+     * 搜索博文
+     */
+    pub async fn search_blog(mut content: String) -> Vec<SearchBlog> {
+        let mut find_str = content.clone();
+        find_str.insert_str(0, r"[\u4E00-\u9FA5A-Za-z0-9_,，。\n\s*\r\t]{0,10}");
+        find_str.insert_str(
+            find_str.len(),
+            r"[\u4E00-\u9FA5A-Za-z0-9_,，。\n\s*\r\t]{0,10}",
+        );
+        content.insert_str(0, "%");
+        content.insert_str(content.len(), "%");
+        //构建正则表达式,出现异常则panic
+        let regex_builder = regex::RegexBuilder::new(&find_str)
+            .case_insensitive(true)
+            .build()
+            .unwrap_or_else(|e| {
+                log::error!("search_blog regex 构建失败:{:?}", e);
+                panic!("search_blog regex 构建失败:{:?}", e)
+            });
+        match SearchBlog::select_by_title(&get_conn().await, &content).await {
+            Ok(mut ok) => {
+                for item in ok.iter_mut() {
+                    let item_content = item.get_content().clone();
+                    match regex_builder.find(&item_content) {
+                        Some(find) => item.set_content(
+                            item_content
+                                .get(find.start()..find.end())
+                                .unwrap_or_default()
+                                .to_string(),
+                        ),
+                        None => {
+                            log::info!("search_blog 未找到关键词:{:?}", find_str);
+                        }
+                    }
+                }
+                ok
+            }
+            Err(e) => {
+                log::error!("search_blog error : {:?}", e);
+                vec![]
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{constant::blog_info_constants::RANDOM_BLOG_LIMIT_NUM, service::BlogService};
+    use rand::Rng;
     use rbatis::rbdc::DateTime;
-
-    use crate::service::BlogService;
+    // use regex::Regex;
 
     #[test]
     pub(crate) fn test_datetime() {
@@ -539,4 +600,87 @@ mod tests {
     //stdout add : [6], delete : []
     //stdout ["a", "d", "e", "f"]
     //stdout add : [], delete : [1, 2, 3, 4, 5, 6]
+
+    //测试随机
+    #[test]
+    pub fn test_random() {
+        let mut ids = vec![];
+        let list = vec![1, 2, 3, 4, 5, 6];
+        let mut rng = rand::thread_rng();
+        let mut result = vec![];
+        //随机获取文章ID并且去重
+        if list.len() < RANDOM_BLOG_LIMIT_NUM {
+            //如果元素数量小于RANDOM_BLOG_LIMIT_NUM 则不处理
+        } else {
+            while ids.len() < RANDOM_BLOG_LIMIT_NUM {
+                let index = rng.gen_range(0..(list.len() - 1));
+                if !ids.contains(&index) {
+                    println!("已添加: {}", index);
+                    ids.push(index);
+                    result.push(list[index].clone());
+                    continue;
+                }
+                println!("重复的index: {}", index);
+            }
+        }
+
+        // dbg!(&result);
+    }
+    //是否存在重复元素
+    fn _test(list: Vec<i32>) -> bool {
+        let list_2 = list.clone();
+        for ele in list {
+            let mut index = 0;
+            for ele_2 in list_2.iter() {
+                if ele == *ele_2 {
+                    index += 1;
+                }
+            }
+            if index > 1 {
+                println!("数字:{}  出现重复次数 : {}", ele, index);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    //字符串搜索 截取前后段
+    #[test]
+    fn test_str() {
+        let item_content = "的撒旦撒打算去的撒大苏打 , 为什么思想家,我相信理想的力量,力量,是创造力,创造力,是智慧,智慧,是勇气,勇气,是力量,力量,是创造力,创造力,是智慧,智慧,是勇气,勇气,是力量,力量,是创造力,创造力,是智慧,智慧,是勇气,勇气,是力量,力量,是创造力,创造力,是智慧,智慧,是勇气,勇气,是力量,力量,是创造力,创造力,是智慧,智慧,是勇气,勇气,是力量,力量,是创造力,创造力,是智慧,智慧,是勇气,勇气";
+        let range = regex::Regex::new(
+            r"[\u4E00-\u9FA5A-Za-z0-9_,，。]{0,10}力量{1}[\u4E00-\u9FA5A-Za-z0-9_,，。]{0,10}",
+        )
+        .unwrap()
+        .find(&item_content)
+        .unwrap()
+        .range();
+        // //获取到关键词索引
+        // let index = match item_content.find(&find_str) {
+        //     Some(index) => index,
+        //     None => {
+        //         log::error!("search_blog Index 获取失败:{:?}", find_str);
+        //         0
+        //     }
+        // };
+        //起始位置索引
+        // let start_index = match (index as isize - 11) <= 0 {
+        //     true => 0,
+        //     false => index - 11,
+        // };
+
+        // //终点位置索引
+        // let end_index = index + 11;
+        //   let new_content;
+
+        // match end_index >= (item_content.len() - 1) {
+        //     true => new_content = item_content.substring(start_index, item_content.len() - 1),
+        //     false => new_content = item_content.substring(start_index, end_index),
+        // }
+        //println!("{:?}", item_content.get(index..index + 3));
+        dbg!(&range);
+        println!("{:?}", item_content.get(range.start..range.end));
+        // println!("{:?}", item_content.substring(range.start, range.end));
+        //  println!("{:?}", new_content);
+    }
 }

@@ -73,6 +73,7 @@ impl AppServer {
                 .service(comment_controller::get_comments)
                 .service(blog_controller::check_blog_password)
                 .service(user_controller::login)
+                .service(blog_controller::search_blog)
                 //admin
                 .service(
                     web::scope("/admin")

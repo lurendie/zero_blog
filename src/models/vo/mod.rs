@@ -13,3 +13,4 @@ pub mod result;
 pub mod serise;
 pub mod blog_visibility;
 pub mod blog_vo;
+pub mod search_blog;

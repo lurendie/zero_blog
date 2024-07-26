@@ -99,3 +99,18 @@ pub async fn check_blog_password(data: Json<SearchRequest>) -> impl Responder {
     }
     Result::error("参数有误!".to_string()).error_json()
 }
+
+#[routes]
+#[get("/searchBlog")]
+pub async fn search_blog(query: Query<HashMap<String, String>>) -> impl Responder {
+    let blog_title = match query.get("query") {
+        Some(title) => title.clone(),
+        None => String::new(),
+    };
+    if blog_title.is_empty() {
+        return Result::error("参数有误!".to_string()).error_json();
+    }
+    //查找title内容的文章
+    let result = to_value!(BlogService::search_blog(blog_title).await);
+    Result::ok("请求成功".to_string(), Some(result)).ok_json()
+}
