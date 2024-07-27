@@ -120,7 +120,11 @@ pub async fn search_blog(query: Query<HashMap<String, String>>) -> impl Responde
 pub async fn moment_like(id: Path<u16>) -> impl Responder {
     let result = BlogService::moment_like(*id).await;
     if let Ok(row) = result {
-        return Result::ok("点赞成功".to_string(), Some(to_value!(row))).ok_json();
+        if row > 0 {
+            return Result::ok("点赞成功".to_string(), Some(to_value!(row))).ok_json();
+        } else {
+            return Result::error("点赞失败".to_string()).error_json();
+        }
     }
     Result::error("参数有误!".to_string()).error_json()
 }
