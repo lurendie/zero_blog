@@ -18,7 +18,8 @@ impl CommentDao {
             blog_id.to_string().as_str(),
         )
         .await
-    } //根据parent_comment_id 获取评论  使用递归函数已实现深沉递归,性能怪兽
+    }
+    //根据parent_comment_id 获取评论  使用递归函数已实现深沉递归,性能怪兽
     pub(crate) async fn get_comments(parent_comment_id: u16) -> Result<Vec<Comment>, Error> {
         let sql = "select * from comment where  parent_comment_id =?";
         let mut page = RBATIS

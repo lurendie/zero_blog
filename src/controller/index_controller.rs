@@ -8,7 +8,6 @@
 use crate::models::vo::result::Result;
 
 use crate::service::{BlogService, CategoryService, SiteSettingService, TagService};
-use actix_web::http::header;
 use actix_web::{routes, HttpResponse, Responder};
 use rbs::to_value;
 use rbs::Value;
@@ -33,7 +32,6 @@ pub async fn site() -> impl Responder {
     let result: Result<HashMap<String, Value>> =
         Result::new(200, String::from("请求成功！"), Some(map));
     HttpResponse::Ok()
-        .insert_header(header::ContentType(mime::APPLICATION_JSON))
         .json(result)
 }
 

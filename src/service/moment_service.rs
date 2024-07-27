@@ -1,3 +1,5 @@
+use crate::models::dto::moment_dto::MomentDTO;
+use crate::rbatis::RBATIS;
 use crate::{dao::MomentDao, models::moment::Moment};
 use rbatis::{IPage, Page};
 pub struct MomentService;
@@ -18,5 +20,12 @@ impl MomentService {
                 item.content = markdown::to_html(&item.content);
             });
         moments
+    }
+
+    pub async fn create_moment(moment: MomentDTO) -> Result<u64, rbatis::rbdc::Error> {
+        let tx = RBATIS.acquire().await.expect("get tx error");
+        let row = MomentDTO::insert(&tx, &moment).await?;
+
+        Ok(row.rows_affected)
     }
 }

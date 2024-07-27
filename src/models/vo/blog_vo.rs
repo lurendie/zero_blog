@@ -7,56 +7,43 @@ use crate::dao::CategoryDao;
 
 use crate::models::category::Category;
 
-use super::tag_dto::TagVO;
-
 //Blog
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct BlogDto {
+pub struct BlogVO {
     id: Option<u16>,
     title: String,
-    #[serde(rename(serialize = "firstPicture"))]
+    #[serde(rename(deserialize = "firstPicture"))]
     first_picture: String,
     content: String,
     description: String,
-    #[serde(
-        deserialize_with = "bool_from_int",
-        rename(deserialize = "is_published")
-    )]
+    #[serde(rename(serialize = "is_published"))]
     published: bool,
-    #[serde(
-        deserialize_with = "bool_from_int",
-        rename(deserialize = "is_recommend")
-    )]
+    #[serde(rename(serialize = "is_recommend"))]
     recommend: bool,
-    #[serde(
-        deserialize_with = "bool_from_int",
-        rename(deserialize = "is_appreciation")
-    )]
+    #[serde(rename(serialize = "is_appreciation"))]
     appreciation: bool,
-    #[serde(
-        deserialize_with = "bool_from_int",
-        rename(deserialize = "is_comment_enabled", serialize = "commentEnabled")
-    )]
+    #[serde(rename(serialize = "is_comment_enabled", deserialize = "commentEnabled"))]
     comment_enabled: bool,
-    #[serde(rename(serialize = "createTime"))]
-    create_time: DateTime,
-    #[serde(rename(serialize = "updateTime"))]
-    update_time: DateTime,
+    #[serde(rename(deserialize = "createTime"))]
+    create_time: Option<DateTime>,
+    #[serde(rename(deserialize = "updateTime"))]
+    update_time: Option<DateTime>,
     views: u16,
-    words: u16,
-    #[serde(rename(serialize = "readTime"))]
+    words: String,
+    #[serde(rename(deserialize = "readTime"))]
     read_time: u16,
     //category_id: u16,
-    #[serde(deserialize_with = "bool_from_int", rename(deserialize = "is_top"))]
+    #[serde(rename(serialize = "is_top"))]
     top: bool,
     password: Option<String>,
     user_id: Option<u16>,
-    #[serde(rename(deserialize = "category_id"), skip_serializing)]
+    #[serde(rename(deserialize = "cate"))]
     //跳过该字段，不进行序列化操作。
     category_id: u16,
     //#[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
     category: Option<Category>,
-    tags: Option<Vec<TagVO>>,
+    #[serde(rename(deserialize = "tagList"), skip_serializing)]
+    tag_list: Option<Vec<u16>>,
 }
 
 // int 类型转boolean
@@ -74,23 +61,20 @@ where
     }
 }
 
-crud!(BlogDto {});
-impl_update!(BlogDto{update_by_id(id:&str) => "`where id = #{id}`"},"blog");
-impl_select_page!(BlogDto{select_page() => "`where is_published = 1`"});
-impl_select_page!(BlogDto{select_page_by_name(name:&str) =>"
+crud!(BlogVO {}, "blog");
+impl_update!(BlogVO{update_by_id(id:&str) => "`where id = #{id}`"},"blog");
+impl_select_page!(BlogVO{select_page() => "`where is_published = 1`"});
+impl_select_page!(BlogVO{select_page_by_name(name:&str) =>"
      if name != null && name != '':
        `where name != #{name}`
      if name == '':
        `where name != ''`"});
 
-//BUG 方法无法正确排序返回结果
-impl_select_page!(BlogDto{select_page_blog_all(title:&str) =>"where 1=1 
- if !title.is_empty():
-   `and title like concat('%', #{title}, '%')` 
- ORDER BY create_time DESC
-"},"blog");
+impl_select_page!(BlogVO{select_page_blog_all(title:&str) =>"where 1=1
+if !title.is_empty():
+   `and title like #{title}`"},"blog");
 
-impl_select!(BlogDto{get_blog(id:&str)=>"`where blog.id = #{id}`"},"blog");
+impl_select!(BlogVO{get_blog(id:&str)=>"`where blog.id = #{id}`"});
 
 // // id 类型转 category
 fn _category_from_id<'de, D>(deserializer: D) -> Result<Option<Category>, D::Error>
@@ -105,7 +89,7 @@ where
     Ok(Some(Category::default()))
 }
 
-impl BlogDto {
+impl BlogVO {
     pub fn get_id(&self) -> u16 {
         self.id.unwrap_or(0)
     }
@@ -138,8 +122,8 @@ impl BlogDto {
     pub fn get_views(&self) -> u16 {
         self.views
     }
-    pub fn get_words(&self) -> u16 {
-        self.words
+    pub fn get_words(&self) -> String {
+        self.words.clone()
     }
     pub fn get_read_time(&self) -> u16 {
         self.read_time
@@ -197,18 +181,18 @@ impl BlogDto {
         self
     }
     pub fn set_create_time(&mut self, create_time: DateTime) -> &mut Self {
-        self.create_time = create_time;
+        self.create_time = Some(create_time);
         self
     }
     pub fn set_update_time(&mut self, update_time: DateTime) -> &mut Self {
-        self.update_time = update_time;
+        self.update_time = Some(update_time);
         self
     }
     pub fn set_views(&mut self, views: u16) -> &mut Self {
         self.views = views;
         self
     }
-    pub fn set_words(&mut self, words: u16) -> &mut Self {
+    pub fn set_words(&mut self, words: String) -> &mut Self {
         self.words = words;
         self
     }
@@ -236,11 +220,11 @@ impl BlogDto {
         self.category = category.clone();
         self
     }
-    pub fn set_tags(&mut self, tags: Option<Vec<TagVO>>) -> &mut Self {
-        self.tags = tags.clone();
+    pub fn set_tag_list(&mut self, tag_list: Option<Vec<u16>>) -> &mut Self {
+        self.tag_list = tag_list.clone();
         self
     }
-    pub fn get_tags(&self) -> Vec<TagVO> {
-        self.tags.clone().unwrap()
+    pub fn get_tag_list(&self) -> Option<Vec<u16>> {
+        self.tag_list.clone()
     }
 }

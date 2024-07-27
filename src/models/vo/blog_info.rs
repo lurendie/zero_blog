@@ -1,4 +1,4 @@
-use crate::models::{category::Category, tag::Tag};
+use crate::models::{category::Category, dto::tag_dto::TagVO};
 // use rbatis::rbdc::datetime::DateTime;
 use rbatis::{crud, impl_select_page};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
@@ -12,13 +12,16 @@ pub struct BlogInfo {
     pub create_time: String,
     pub views: u16,
     pub words: u16,
+    #[serde(rename(serialize = "readTime"))]
     pub read_time: u16,
     pub password: Option<String>,
     pub privacy: Option<bool>,
     #[serde(deserialize_with = "bool_from_int")]
     pub is_top: bool,
-    pub tags: Option<Vec<Tag>>,
+    pub tags: Option<Vec<TagVO>>,
     pub category: Option<Category>,
+    #[serde(rename(serialize = "firstPicture", deserialize = "first_picture"))]
+    pub first_picture: Option<String>,
 }
 
 // impl BlogInfo {

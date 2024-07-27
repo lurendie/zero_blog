@@ -13,7 +13,7 @@ impl AboutService {
             .await
             .unwrap_or_else(|e| {
                 //出现异常情况
-                log::error!("get_about函数：{}", e);
+                log::error!("get_about error：{}", e);
                 vec![]
             })
             .iter()

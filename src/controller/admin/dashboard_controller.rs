@@ -1,8 +1,3 @@
-/*
- * @Author: lurendie 549700459@qq.com
- * @Date: 2024-05-12 23:23:36
- * @LastEditors: lurendie
- */
 use crate::service::DashboardService;
 use crate::{middleware::AppClaims, models::Result};
 use actix_jwt_session::Authenticated;

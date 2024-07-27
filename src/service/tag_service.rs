@@ -2,16 +2,12 @@ use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
 use crate::constant::redis_key_constants;
-use crate::dao::BlogDao;
-/*
- * @Author: lurendie
- * @Date: 2024-02-24 22:58:03
- * @LastEditors: lurendie
- * @LastEditTime: 2024-04-21 00:15:16
- * @FilePath: \zero_blog\src\service\tag_service.rs
- */
+use crate::dao::{BlogDao, BlogTagDao};
+
 use crate::dao::TagDao;
+use crate::models::dto::tag_dto::TagVO;
 use crate::models::vo::serise::Series;
+use crate::rbatis::RBATIS;
 
 use super::RedisService;
 pub struct TagService;
@@ -67,5 +63,36 @@ impl TagService {
         map.insert(to_value!("legend"), to_value!(legend));
         map.insert(to_value!("series"), to_value!(series));
         map
+    }
+
+    pub(crate) async fn get_tags_by_blog_id(blog_id: u16) -> Vec<u16> {
+        let mut list = Vec::new();
+        for item in BlogTagDao::get_tags_by_blog_id(blog_id).await.unwrap() {
+            list.push(item.get_tag_id());
+        }
+        list
+    }
+
+    pub(crate) async fn get_tags_by_id(tag_id: u16) -> TagVO {
+        let tags = TagVO::select_by_column(
+            &RBATIS.acquire().await.unwrap(),
+            "id",
+            tag_id.to_string().as_str(),
+        )
+        .await;
+        let tag = match tags {
+            Ok(mut list) => {
+                if !list.is_empty() {
+                    let tag = list.pop().unwrap();
+                    return tag;
+                }
+                TagVO::default()
+            }
+            Err(err) => {
+                log::error!("get_tags_by_blog_id err: {:?}", err);
+                TagVO::default()
+            }
+        };
+        tag
     }
 }

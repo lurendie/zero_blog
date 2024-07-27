@@ -10,7 +10,9 @@ use std::sync::Arc;
 use crate::config;
 use log::LevelFilter;
 use once_cell::sync::Lazy;
-use rbatis::{intercept_log::LogInterceptor, rbatis::RBatis, DefaultPool};
+use rbatis::{
+    executor::RBatisConnExecutor, intercept_log::LogInterceptor, rbatis::RBatis, DefaultPool,
+};
 use rbdc_mysql::{options::MySqlConnectOptions, Driver};
 
 // 定义一个静态变量来存储Rbatis连接实例。
@@ -29,3 +31,11 @@ pub static RBATIS: Lazy<RBatis> = Lazy::new(|| {
     rbatis.set_intercepts(vec![Arc::new(LogInterceptor::new(LevelFilter::Debug))]);
     rbatis
 });
+
+// 获取数据库连接
+pub async fn get_conn() -> RBatisConnExecutor {
+    match RBATIS.acquire().await {
+        Ok(conn) => conn,
+        Err(e) => panic!("获取数据库连接失败！err: {}", e),
+    }
+}

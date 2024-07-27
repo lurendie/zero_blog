@@ -1,15 +1,6 @@
 use std::fmt::Debug;
 
-/*
- * @Author: lurendie 549700459@qq.com
- * @Date: 2024-02-24 22:58:03
- * @LastEditors: lurendie
- * @LastEditTime: 2024-05-14 19:27:50
- */
-use actix_web::{
-    http::{header, StatusCode},
-    HttpResponse,
-};
+use actix_web::{http::StatusCode, HttpResponse};
 use rbs::Value;
 //封装响应结果
 use serde::{Deserialize, Serialize};
@@ -30,24 +21,26 @@ impl<T> Result<T> {
     pub fn ok(msg: String, data: Option<T>) -> Result<T> {
         Result {
             code: 200,
-            msg: msg,
-            data: data,
+            msg,
+            data,
         }
     }
 
     //无异常返回数据
     pub fn ok_no_data(msg: String) -> Result<T> {
+        // 200 OK
         Result {
             code: 200,
-            msg: msg,
+            msg,
             data: None,
         }
     }
 
     pub fn error(msg: String) -> Result<T> {
+        // 500 Internal Server Error
         Result {
             code: 500,
-            msg: msg,
+            msg,
             data: None,
         }
     }
@@ -60,14 +53,14 @@ impl Result<Value> {
     //无异常返回
     pub fn ok_json(&self) -> HttpResponse {
         HttpResponse::Ok()
-            .insert_header(header::ContentType(mime::APPLICATION_JSON))
+            .content_type(mime::TEXT_HTML_UTF_8)
             .json(&self)
     }
 
     pub fn error_json(&self) -> HttpResponse {
         HttpResponse::Ok()
-            .insert_header(header::ContentType(mime::APPLICATION_JSON))
             .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .content_type(mime::TEXT_HTML_UTF_8)
             .json(&self)
     }
 }

@@ -24,6 +24,7 @@ pub struct BlogDetail {
     pub(crate) update_time: DateTime,
     pub(crate) views: u16,
     pub(crate) words: u16,
+    #[serde(rename(serialize = "readTime"))]
     pub(crate) read_time: u16,
     #[serde(deserialize_with = "bool_from_int")]
     pub(crate) is_top: bool,

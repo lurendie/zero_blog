@@ -67,7 +67,9 @@ impl RedisService {
         if result.is_empty() {
             return None;
         } else {
-            return Some(serde_json::from_str::<HashMap<String, Value>>(result.as_str()).unwrap());
+            return Some(
+                serde_json::from_str::<HashMap<String, Value>>(result.as_str()).unwrap_or_default(),
+            );
         }
     }
 
@@ -75,12 +77,30 @@ impl RedisService {
      * Set `key` `value`字符串
      */
     pub async fn set_value_vec(key: String, value: &Value) {
+        //如果KEY或者VALUE为空则不设置
+        if key.is_empty() || value.is_empty() {
+            return;
+        }
         //1.序列化
-        let value_str = serde_json::to_string(value).unwrap();
+        let value_str = serde_json::to_string(value).unwrap_or_default();
+        //判断转换字符串是否为空
+        if value_str.is_empty() {
+            return;
+        }
         //2.获取连接
-        let mut con = REDIS.get_connection().unwrap();
-        let _ = con.set::<String, String, String>(key.clone(), value_str);
-        RedisService::expire(key);
+        match REDIS.get_connection() {
+            //3.获取连接成功
+            Ok(mut con) => {
+                //4.设置数据
+                let _ = con.set::<String, String, String>(key.clone(), value_str);
+                //5.设置过期时间
+                RedisService::expire(key);
+            }
+            //获取连接失败
+            Err(e) => {
+                log::error!("redis get connection error  set_value_vec:{}", e);
+            }
+        }
     }
 
     /**
@@ -88,22 +108,49 @@ impl RedisService {
      */
     pub async fn get_value_vec(key: String) -> Option<Value> {
         //1.获取连接
-        let mut con = REDIS.get_connection().unwrap();
-        let result = con.get::<String, String>(key).unwrap_or_default();
-        //redis 反序列化
-        if result.is_empty() {
-            return None;
-        } else {
-            return Some(serde_json::from_str(result.as_str()).unwrap());
+        match REDIS.get_connection() {
+            //2.获取连接成功
+            Ok(mut con) => {
+                //3.获取数据
+                let result = con.get::<String, String>(key).unwrap_or_else(|e| {
+                    log::error!("redis get key error:{}", e);
+                    String::new()
+                });
+                if result.is_empty() {
+                    return None;
+                }
+                //redis 反序列化
+                Some(serde_json::from_str(result.as_str()).unwrap_or_default())
+            }
+            //获取连接失败
+            Err(e) => {
+                log::error!("redis get connection error  get_value_vec:{}", e);
+                None
+            }
         }
     }
 
-    //设置过期时间
+    /**
+     * 设置key的过期时间
+     */
     pub fn expire(key: String) {
-        let mut con: Box<dyn ConnectionLike> = Box::new(REDIS.get_connection().unwrap());
-        redis::cmd("EXPIRE")
-            .arg(&[key, CONFIG.get().unwrap().redis.ttl.clone()])
-            .execute(con.as_mut())
+        //获取配置
+        match CONFIG.get() {
+            Some(config) => {
+                //获取连接
+                if let Ok(redis) = REDIS.get_connection() {
+                    let mut con: Box<dyn ConnectionLike> = Box::new(redis);
+                    redis::cmd("EXPIRE")
+                        .arg(&[key, config.redis.ttl.clone()])
+                        .execute(con.as_mut());
+                } else {
+                    log::error!("redis连接失败")
+                }
+            }
+            None => {
+                log::error!("cofnig配置不存在")
+            }
+        }
     }
 }
 
