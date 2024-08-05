@@ -13,6 +13,7 @@ use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog
 use crate::rbatis::get_conn;
 use crate::rbatis::RBATIS;
 use crate::service::RedisService;
+use crate::utils::MarkdownParser;
 use rand::Rng;
 use rbatis::IPage;
 use rbatis::{rbdc::DateTime, IPageRequest, Page};
@@ -216,7 +217,7 @@ impl BlogService {
         let mut blog = BlogDao::get_by_id(id)
             .await
             .unwrap_or_else(|| BlogDetail::new());
-        blog.content = markdown::to_html(&blog.content);
+        blog.content = MarkdownParser::parser_html(&blog.content);
         Some(blog)
     }
 
@@ -239,22 +240,22 @@ impl BlogService {
         map
     }
 
-//获取归档文章
-pub(crate) async fn get_archives() -> ValueMap {
-    //获取所有文章的日期
-    let mut map: ValueMap = ValueMap::new();
-    let blog_datetimes = BlogDao::get_all_datetime().await.unwrap_or_else(|e| {
-        log::error!("{:?}", e);
-        vec![]
-    });
-    let mut date_times = vec![];
-    let _ = blog_datetimes
-        .iter()
-        .map(|itme| date_times.push(itme.create_time.format("YYYY-MM")))
-        .collect::<Vec<_>>();
-    //通过日期获取文章
-    for item in date_times.iter_mut() {
-        let mut itme_map: Vec<BlogArchive> = vec![];
+    //获取归档文章
+    pub(crate) async fn get_archives() -> ValueMap {
+        //获取所有文章的日期
+        let mut map: ValueMap = ValueMap::new();
+        let blog_datetimes = BlogDao::get_all_datetime().await.unwrap_or_else(|e| {
+            log::error!("{:?}", e);
+            vec![]
+        });
+        let mut date_times = vec![];
+        let _ = blog_datetimes
+            .iter()
+            .map(|itme| date_times.push(itme.create_time.format("YYYY-MM")))
+            .collect::<Vec<_>>();
+        //通过日期获取文章
+        for item in date_times.iter_mut() {
+            let mut itme_map: Vec<BlogArchive> = vec![];
 
             let blogs = BlogDao::get_by_date(item.clone())
                 .await
@@ -279,9 +280,9 @@ pub(crate) async fn get_archives() -> ValueMap {
         map
     }
 
-pub(crate) async fn get_archives_count() -> Option<usize> {
-    Some(BlogDao::get_archives_count().await.unwrap() as usize)
-}
+    pub(crate) async fn get_archives_count() -> Option<usize> {
+        Some(BlogDao::get_archives_count().await.unwrap() as usize)
+    }
 
     /**
      * 处理BlogInfo结构体依赖关系
@@ -304,7 +305,7 @@ pub(crate) async fn get_archives_count() -> Option<usize> {
             }
             item.password = Some(String::from(""));
             //转HTML
-            item.description = markdown::to_html(&item.description);
+            item.description =MarkdownParser::parser_html(&item.description);
             let tags = TagDao::get_blog_tags(id).await;
             item.tags = Some(tags);
             item.create_time = item.create_time.as_str()[0..19].to_string();

@@ -29,7 +29,7 @@ pub struct BlogVO {
     #[serde(rename(deserialize = "updateTime"))]
     update_time: Option<DateTime>,
     views: u16,
-    words: String,
+    words: i32,
     #[serde(rename(deserialize = "readTime"))]
     read_time: u16,
     //category_id: u16,
@@ -122,8 +122,8 @@ impl BlogVO {
     pub fn get_views(&self) -> u16 {
         self.views
     }
-    pub fn get_words(&self) -> String {
-        self.words.clone()
+    pub fn get_words(&self) -> i32 {
+        self.words
     }
     pub fn get_read_time(&self) -> u16 {
         self.read_time
@@ -192,7 +192,7 @@ impl BlogVO {
         self.views = views;
         self
     }
-    pub fn set_words(&mut self, words: String) -> &mut Self {
+    pub fn set_words(&mut self, words: i32) -> &mut Self {
         self.words = words;
         self
     }
