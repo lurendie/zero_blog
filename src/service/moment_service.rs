@@ -1,5 +1,6 @@
 use crate::models::dto::moment_dto::MomentDTO;
 use crate::rbatis::RBATIS;
+use crate::utils::MarkdownParser;
 use crate::{dao::MomentDao, models::moment::Moment};
 use rbatis::{IPage, Page};
 pub struct MomentService;
@@ -17,7 +18,7 @@ impl MomentService {
             .iter_mut()
             .for_each(|item: &mut Moment| {
                 item.create_time = item.create_time.as_str()[0..19].to_string();
-                item.content = markdown::to_html(&item.content);
+                item.content = MarkdownParser::parser_html(&item.content);
             });
         moments
     }

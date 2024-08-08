@@ -86,7 +86,14 @@ pub async fn category_and_tag() -> impl Responder {
 #[routes]
 #[get("/blog")]
 pub async fn blog(query: Query<HashMap<String, String>>) -> impl Responder {
-    let id = query.get("id").unwrap().parse::<u16>().unwrap();
+    let id = query
+        .get("id")
+        .unwrap_or(&"0".to_string())
+        .parse::<u16>()
+        .unwrap_or_default();
+    if id <= 0 {
+        return Result::error("参数错误".to_string()).error_json();
+    }
     let blog = BlogService::get_blog_dto(id).await;
     Result::ok("请求成功!".to_string(), Some(to_value!(blog))).ok_json()
 }

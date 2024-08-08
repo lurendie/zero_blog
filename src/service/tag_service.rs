@@ -95,4 +95,30 @@ impl TagService {
         };
         tag
     }
+
+    /**
+     * 添加标签
+     */
+    pub async fn add_tag(name: String) -> Result<u16,rbatis::Error> {
+        let mut tag = TagVO::default();
+        tag.name = name;
+        let result = TagVO::insert(&RBATIS.acquire().await.unwrap(), &tag).await;
+        //添加标签
+        match result {
+            Ok(id) =>  
+            match id.last_insert_id {
+                Value::U32(id) => Ok(id as u16),
+                _ => {
+                    log::error!("获取新插入的id失败");
+                    Ok(0)
+                }
+            },
+            Err(err) => {
+                log::error!("add_tag err: {:?}", err);
+                Err(err)
+            }
+        }
+    }
+
+
 }

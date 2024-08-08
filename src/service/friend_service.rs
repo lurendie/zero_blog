@@ -1,5 +1,6 @@
 use crate::dao::site_setting_dao;
 use crate::dao::FriendDao;
+use crate::utils::MarkdownParser;
 use rbs::{to_value, value::map::ValueMap};
 
 pub struct FriendService;
@@ -21,7 +22,7 @@ impl FriendService {
             if item.name_en == "friendContent" {
                 friend_info.insert(
                     to_value!("content"),
-                    to_value!(markdown::to_html(&item.value)),
+                    to_value!(MarkdownParser::parser_html(&item.value)),
                 );
             }
             if item.name_en == "friendCommentEnabled" {

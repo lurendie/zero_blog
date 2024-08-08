@@ -1,5 +1,6 @@
 use rbatis::rbdc::datetime::DateTime;
 use rbatis::{crud, impl_select, impl_select_page, impl_update};
+use rbs::Value;
 use serde::de::Unexpected;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -29,7 +30,7 @@ pub struct BlogVO {
     #[serde(rename(deserialize = "updateTime"))]
     update_time: Option<DateTime>,
     views: u16,
-    words: String,
+    words: i32,
     #[serde(rename(deserialize = "readTime"))]
     read_time: u16,
     //category_id: u16,
@@ -43,7 +44,7 @@ pub struct BlogVO {
     //#[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
     category: Option<Category>,
     #[serde(rename(deserialize = "tagList"), skip_serializing)]
-    tag_list: Option<Vec<u16>>,
+    tag_list: Option<Vec<Value>>,
 }
 
 // int 类型转boolean
@@ -122,8 +123,8 @@ impl BlogVO {
     pub fn get_views(&self) -> u16 {
         self.views
     }
-    pub fn get_words(&self) -> String {
-        self.words.clone()
+    pub fn get_words(&self) -> i32 {
+        self.words
     }
     pub fn get_read_time(&self) -> u16 {
         self.read_time
@@ -192,7 +193,7 @@ impl BlogVO {
         self.views = views;
         self
     }
-    pub fn set_words(&mut self, words: String) -> &mut Self {
+    pub fn set_words(&mut self, words: i32) -> &mut Self {
         self.words = words;
         self
     }
@@ -220,11 +221,11 @@ impl BlogVO {
         self.category = category.clone();
         self
     }
-    pub fn set_tag_list(&mut self, tag_list: Option<Vec<u16>>) -> &mut Self {
+    pub fn set_tag_list(&mut self, tag_list: Option<Vec<Value>>) -> &mut Self {
         self.tag_list = tag_list.clone();
         self
     }
-    pub fn get_tag_list(&self) -> Option<Vec<u16>> {
+    pub fn get_tag_list(&self) -> Option<Vec<Value>> {
         self.tag_list.clone()
     }
 }

@@ -118,6 +118,9 @@ pub async fn search_blog(query: Query<HashMap<String, String>>) -> impl Responde
 #[routes]
 #[post("/moment/like/{id}")]
 pub async fn moment_like(id: Path<u16>) -> impl Responder {
+    if *id <= 0 {
+        return Result::error("参数有误!".to_string()).error_json();
+    }
     let result = BlogService::moment_like(*id).await;
     if let Ok(row) = result {
         if row > 0 {
