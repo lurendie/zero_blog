@@ -11,4 +11,5 @@ pub struct Moment {
     is_published: u8,
 }
 crud!(Moment {}, "moment");
-impl_select_page!(Moment{select_page() => "`where is_published = 1`"});
+impl_select_page!(Moment{select_page() => "`order by id desc`"});
+impl_select_page!(Moment{select_published_page() => "`where is_published = 1 order by id desc`"});

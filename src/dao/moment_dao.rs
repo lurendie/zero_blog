@@ -14,5 +14,14 @@ impl MomentDao {
         .await;
         moments
     }
+
+    pub async fn get_public_moments(page_num: usize)->Result<Page<Moment>, Error>{
+        let moments = Moment::select_published_page(
+            &RBATIS.acquire().await.unwrap(),
+            &PageRequest::new(page_num as u64, 10),
+        )
+        .await;
+        moments
+    }
     
 }

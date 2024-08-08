@@ -19,7 +19,7 @@ pub(crate) async fn moments(params: Query<HashMap<String, String>>) -> impl Resp
     }else {
         page=1;
     }
-    let page =MomentService::get_moments(page).await;
+    let page =MomentService::get_public_moments(page).await;
     let mut data:ValueMap=ValueMap::new();
     data.insert(to_value!("list"), to_value!(&page.records));
     data.insert(to_value!("totalPage"), to_value!(&page.pages()));
