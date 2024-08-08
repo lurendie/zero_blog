@@ -21,8 +21,7 @@ mod tests {
     use std::io::{self, Write};
 
     use comrak::{
-        adapters::{HeadingAdapter, HeadingMeta},
-        format_html_with_plugins, markdown_to_html_with_plugins, Options, Plugins,
+         markdown_to_html_with_plugins, Options, Plugins,
     };
 
     use super::CustomHeadingAdapter;
