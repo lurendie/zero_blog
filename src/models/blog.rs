@@ -1,6 +1,6 @@
+use crate::service::CommonService;
 use rbatis::rbdc::datetime::DateTime;
 use rbatis::{crud, impl_select, impl_select_page, impl_update};
-use serde::de::Unexpected;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::dao::CategoryDao;
@@ -15,13 +15,13 @@ pub struct Blog {
     first_picture: String,
     content: String,
     description: String,
-    #[serde(deserialize_with = "bool_from_int")]
+    #[serde(deserialize_with = "CommonService::bool_from_int")]
     is_published: bool,
-    #[serde(deserialize_with = "bool_from_int")]
+    #[serde(deserialize_with = "CommonService::bool_from_int")]
     is_recommend: bool,
-    #[serde(deserialize_with = "bool_from_int")]
+    #[serde(deserialize_with = "CommonService::bool_from_int")]
     is_appreciation: bool,
-    #[serde(deserialize_with = "bool_from_int")]
+    #[serde(deserialize_with = "CommonService::bool_from_int")]
     is_comment_enabled: bool,
     create_time: DateTime,
     update_time: DateTime,
@@ -29,7 +29,7 @@ pub struct Blog {
     words: u16,
     read_time: u16,
     //category_id: u16,
-    #[serde(deserialize_with = "bool_from_int")]
+    #[serde(deserialize_with = "CommonService::bool_from_int")]
     is_top: bool,
     password: Option<String>,
     user_id: u16,
@@ -38,21 +38,6 @@ pub struct Blog {
     category_id: u16,
     //#[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
     category: Option<Category>,
-}
-
-// int 类型转boolean
-pub fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    match u64::deserialize(deserializer)? {
-        0 => Ok(false),
-        1 => Ok(true),
-        other => Err(serde::de::Error::invalid_value(
-            Unexpected::Unsigned(other),
-            &"0 or 1",
-        )),
-    }
 }
 
 crud!(Blog {});

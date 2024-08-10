@@ -1,6 +1,6 @@
 server:
   host: "127.0.0.1"
-  port: 8090
+  port: 8089
   front_adderss: "http://localhost:8080" ## 前端页面地址 用于跨域访问
 mysql:
   host: "127.0.0.1"
