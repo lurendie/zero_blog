@@ -13,6 +13,7 @@ use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog
 use crate::rbatis::get_conn;
 use crate::rbatis::RBATIS;
 use crate::service::RedisService;
+use crate::utils::MarkdownParser;
 use rand::Rng;
 use rbatis::IPage;
 use rbatis::{rbdc::DateTime, IPageRequest, Page};
@@ -216,7 +217,7 @@ impl BlogService {
         let mut blog = BlogDao::get_by_id(id)
             .await
             .unwrap_or_else(|| BlogDetail::new());
-        blog.content = markdown::to_html(&blog.content);
+        blog.content = MarkdownParser::parser_html(&blog.content);
         Some(blog)
     }
 
@@ -304,7 +305,7 @@ impl BlogService {
             }
             item.password = Some(String::from(""));
             //转HTML
-            item.description = markdown::to_html(&item.description);
+            item.description =MarkdownParser::parser_html(&item.description);
             let tags = TagDao::get_blog_tags(id).await;
             item.tags = Some(tags);
             item.create_time = item.create_time.as_str()[0..19].to_string();
@@ -422,7 +423,6 @@ impl BlogService {
             };
             // 获取新插入的id
             let new_id = match data.last_insert_id {
-                Value::U64(id) => id as u16,
                 Value::U32(id) => id as u16,
                 _ => {
                     log::error!("获取新插入的id失败");
@@ -434,7 +434,32 @@ impl BlogService {
             };
 
             // 更新添加标签
-            let add_tags = query.get_tag_list().unwrap_or_default();
+            let mut add_tags: Vec<u16> = vec![];
+           for value in query.get_tag_list().unwrap_or_default(){
+                match value{
+                    Value::U64(id) => {
+                        add_tags.push(id as u16);
+                    }
+                    Value::U32(id) => {
+                        add_tags.push(id as u16);
+                    }
+                    Value::I32(id) => {
+                        add_tags.push(id as u16);
+                    }
+                    Value::String(name)=>{
+                        let id =TagService::add_tag(name).await.unwrap_or_default();
+                        add_tags.push(id);
+                    }
+                    _ => {
+                        log::error!("标签id类型错误");
+                        tx.rollback()
+                            .await
+                            .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                        return false;
+                    }  
+                }
+           }
+
             if !BlogTagService::inser_tags(add_tags, new_id, &mut tx).await {
                 tx.rollback()
                     .await
@@ -452,7 +477,34 @@ impl BlogService {
             }
 
             // 标签处理
-            let add_tags = query.get_tag_list().unwrap_or_default();
+            let mut add_tags = vec![];
+            for value in query.get_tag_list().unwrap_or_default(){
+                match value{
+                    Value::U64(id) => {
+                        add_tags.push(id as u16);
+                    }
+                    Value::U32(id) => {
+                        add_tags.push(id as u16);
+                    }
+                    Value::I32(id) => {
+                        add_tags.push(id as u16);
+                    }
+                    Value::String(name)=>{
+                        let id =TagService::add_tag(name).await.unwrap_or_default();
+                        add_tags.push(id);
+                    }
+                    _ => {
+                        log::error!("标签id类型错误");
+                        tx.rollback()
+                            .await
+                            .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
+                        return false;
+                    }  
+                }
+           }
+            
+            
+            
             let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
             let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
 

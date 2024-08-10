@@ -1,5 +1,6 @@
 use crate::models::about::About;
 use crate::rbatis::RBATIS;
+use crate::utils::MarkdownParser;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 
@@ -20,7 +21,7 @@ impl AboutService {
             .for_each(|item: &About| {
                 //转HTML
                 if &item.name_en == "content" {
-                    let content = markdown::to_html(&item.value);
+                    let content = MarkdownParser::parser_html(&item.value);
                     map.insert(to_value!(&item.name_en), to_value!(content));
                 } else {
                     map.insert(to_value!(&item.name_en), to_value!(&item.value));
