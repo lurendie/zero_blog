@@ -215,8 +215,7 @@ impl BlogService {
     //根据ID查找博文
     pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
         let mut blog = BlogDao::get_by_id(id)
-            .await
-            .unwrap_or_else(|| BlogDetail::new());
+            .await?;
         blog.content = MarkdownParser::parser_html(&blog.content);
         Some(blog)
     }
