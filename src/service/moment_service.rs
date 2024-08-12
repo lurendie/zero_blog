@@ -1,7 +1,8 @@
 use crate::models::dto::moment_dto::MomentDTO;
-use crate::rbatis::RBATIS;
+use crate::rbatis::{RBATIS,get_conn};
 use crate::utils::MarkdownParser;
 use crate::{dao::MomentDao, models::moment::Moment};
+use rbatis::rbatis_codegen::ops::AsProxy;
 use rbatis::{IPage, Page};
 pub struct MomentService;
 
@@ -38,5 +39,17 @@ impl MomentService {
                 item.content = MarkdownParser::parser_html(&item.content);
             });
         moments
+    }
+
+    /**
+     * 更新动态的发布状态
+     */
+    pub(crate) async fn update_published(id: u16, is_published: bool) -> Result<u64, rbatis::rbdc::Error> {
+        let tx = get_conn().await;
+        let mut table=MomentDTO::default();
+        table.set_id(id as u16);
+        table.set_is_published(is_published.u32() as u8);
+       let row = MomentDTO::update_by_column(&tx, &table, "id").await?;
+       Ok(row.rows_affected)
     }
 }

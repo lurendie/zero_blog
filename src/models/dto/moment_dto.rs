@@ -1,8 +1,8 @@
 use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct MomentDTO {
-    id: Option<u64>,
+    id: Option<u16>,
     pub(crate) content: Option<String>,
     #[serde(rename(deserialize = "createTime"))]
     pub(crate) create_time: Option<String>,
@@ -27,10 +27,10 @@ impl MomentDTO {
         }
     }
 
-    pub fn set_id(&mut self, id: u64) {
+    pub fn set_id(&mut self, id: u16) {
         self.id = Some(id);
     }   
-    pub fn get_id(&self) -> Option<u64> {
+    pub fn get_id(&self) -> Option<u16> {
         self.id
     }
 

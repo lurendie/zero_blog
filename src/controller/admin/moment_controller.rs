@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::middleware::AppClaims;
 //创建动态
 use crate::models::dto::moment_dto::MomentDTO;
@@ -38,5 +40,26 @@ pub async fn moments(_:Authenticated<AppClaims>, query:web::Query<SearchRequest>
     value_map.insert(to_value!("total"), to_value!(page_list.total()));
     value_map.insert(to_value!("list"), to_value!(page_list.get_records()));
     Result::ok("请求成功".to_string(), Some(to_value!(value_map))).ok_json() // 返回一个包含map的JSON响应
+    
+}
+
+/**
+ * 动态发布状态
+ */
+
+#[routes]
+#[put("/moment/published")]
+pub async fn moment_published(query:web::Query<HashMap<String, String>>, _:Authenticated<AppClaims>) -> impl Responder {
+    let id = query.get("id").unwrap().parse::<u16>().unwrap_or(0);
+    
+    if id<=0{
+        return Result::error("参数有误！".to_string()).error_json();
+    }
+    let is_published = query.get("published").unwrap().parse::<bool>().unwrap();
+   let row= MomentService::update_published(id, is_published).await;
+    if let Err(e)  = row {
+        return Result::error(e.to_string()).error_json();
+    }
+    Result::ok_no_data("更新成功".to_string()).ok_json()
     
 }
