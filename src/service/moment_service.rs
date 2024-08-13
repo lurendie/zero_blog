@@ -52,4 +52,31 @@ impl MomentService {
        let row = MomentDTO::update_by_column(&tx, &table, "id").await?;
        Ok(row.rows_affected)
     }
+
+    /**
+     * 删除动态
+     */
+    pub(crate) async fn delete_moment(id: u16) -> Result<u64, rbatis::rbdc::Error> {
+        let tx = get_conn().await;
+        let row = MomentDTO::delete_by_column(&tx, "id", id).await?;
+        Ok(row.rows_affected)
+    }
+
+    /**
+     * 获取ID动态
+     */
+    
+    pub(crate) async fn get_moment_by_id(id: u16) -> Option<Moment> {
+        let tx = get_conn().await;
+        let mut moments = Moment::select_by_column(&tx, "id", id).await.unwrap_or_else(|e| {
+            log::error!("get_moment_by_id error:{}", e);
+            //出现异常则返回初始化对象
+            vec![]
+        });
+        if moments.len() > 0 {
+           let moment= moments.pop()?;
+          return  Some(moment);
+        }
+        None
+    }
 }

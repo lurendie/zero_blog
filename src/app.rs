@@ -92,7 +92,9 @@ impl AppServer {
                         .service(admin::blog_controller::create_blog)
                         .service(admin::blog_controller::delete_blog)
                         .service(admin::moment_controller::moments)
-                        .service(admin::moment_controller::moment_published),
+                        .service(admin::moment_controller::moment_published)
+                        .service(admin::moment_controller::delete_moment)
+                        .service(admin::moment_controller::get_moment_by_id),
                 )
                 .default_service(web::to(index_controller::default))
         })

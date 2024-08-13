@@ -1,7 +1,7 @@
 use crate::service::CommonService;
 use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct Moment {
     id: Option<u64>,
     pub(crate) content: String,
