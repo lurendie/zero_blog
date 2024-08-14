@@ -74,7 +74,7 @@ impl AppServer {
                 .service(blog_controller::check_blog_password)
                 .service(user_controller::login)
                 .service(blog_controller::search_blog)
-                .service(blog_controller::moment_like)
+                .service(moment_controller::moment_like)
                 //admin
                 .service(
                     web::scope("/admin")
@@ -94,7 +94,9 @@ impl AppServer {
                         .service(admin::moment_controller::moments)
                         .service(admin::moment_controller::moment_published)
                         .service(admin::moment_controller::delete_moment)
-                        .service(admin::moment_controller::get_moment_by_id),
+                        .service(admin::moment_controller::get_moment_by_id)
+                        .service(admin::moment_controller::update_moment)
+                        .service(admin::moment_controller::create_moment),
                 )
                 .default_service(web::to(index_controller::default))
         })

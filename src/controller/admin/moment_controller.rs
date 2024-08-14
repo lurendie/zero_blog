@@ -1,7 +1,5 @@
 use std::collections::HashMap;
-
 use crate::middleware::AppClaims;
-//创建动态
 use crate::models::dto::moment_dto::MomentDTO;
 use crate::models::{Result,vo::page_request::SearchRequest};
 use crate::service::MomentService;
@@ -17,7 +15,7 @@ use rbs::to_value;
 #[routes]
 #[post("/moment")]
 pub async fn create_moment(moment: web::Json<MomentDTO>,_:Authenticated<AppClaims>) -> impl Responder {
-    let moment = MomentService::create_moment(moment.into_inner()).await;
+    let moment: std::result::Result<u64, rbatis::rbdc::Error> = MomentService::create_and_update_moment(moment.into_inner()).await;
     match moment {
         Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
         Err(e) => Result::error(e.to_string()).error_json(),
@@ -94,4 +92,17 @@ pub async fn delete_moment(query:web::Query<HashMap<String, String>>, _:Authenti
         return Result::error(e.to_string()).error_json();
     }
     Result::ok_no_data("删除成功".to_string()).ok_json()    
-}   
+}
+
+/**
+ * 更新动态
+ */
+#[routes]
+#[put("/moment")]
+pub async fn update_moment(moment: web::Json<MomentDTO>,_:Authenticated<AppClaims>) -> impl Responder {
+    let moment = MomentService::create_and_update_moment(moment.into_inner()).await;
+    match moment {
+        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).error_json(),
+    }
+}

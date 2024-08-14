@@ -4,7 +4,6 @@ use crate::constant::redis_key_constants;
 use crate::dao::BlogDao;
 use crate::dao::{CategoryDao, TagDao};
 use crate::models::dto::blog_dto::BlogDto;
-use crate::models::dto::moment_dto::MomentDTO;
 use crate::models::vo::blog_visibility::BlogVisibility;
 use crate::models::vo::blog_vo::BlogVO;
 use crate::models::vo::page_request::SearchRequest;
@@ -623,17 +622,7 @@ impl BlogService {
         }
     }
 
-    pub(crate) async fn moment_like(id: u16) -> Result<u64, rbatis::rbdc::Error> {
-        let executor = get_conn().await;
-        let mut table =
-            MomentDTO::select_by_column(&executor, "id", id.to_string().as_str()).await?;
-        for item in table.iter_mut() {
-            item.set_likes(item.get_likes() + 1);
-            let query = MomentDTO::update_by_column(&executor, &item, "id").await?;
-            return Ok(query.rows_affected);
-        }
-        Ok(0)
-    }
+  
 }
 
 #[cfg(test)]

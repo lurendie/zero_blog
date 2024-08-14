@@ -1,8 +1,8 @@
 use crate::models::dto::moment_dto::MomentDTO;
-use crate::rbatis::{RBATIS,get_conn};
+use crate::rbatis::get_conn;
 use crate::utils::MarkdownParser;
+use rbatis::rbdc::datetime::DateTime;
 use crate::{dao::MomentDao, models::moment::Moment};
-use rbatis::rbatis_codegen::ops::AsProxy;
 use rbatis::{IPage, Page};
 pub struct MomentService;
 
@@ -17,9 +17,15 @@ impl MomentService {
         moments
     }
     //创建动态
-    pub async fn create_moment(moment: MomentDTO) -> Result<u64, rbatis::rbdc::Error> {
-        let tx = RBATIS.acquire().await.expect("get tx error");
-        let row = MomentDTO::insert(&tx, &moment).await?;
+    pub async fn create_and_update_moment(mut moment: MomentDTO) -> Result<u64, rbatis::rbdc::Error> {
+        let tx = get_conn().await;
+        let row;
+        if moment.get_id().unwrap_or(0)>0{
+            row= MomentDTO::update_by_column(&tx, &moment, "id").await?;
+        }else{
+            moment.set_create_time(DateTime::now().to_string());
+            row = MomentDTO::insert(&tx, &moment).await?;
+        }
 
         Ok(row.rows_affected)
     }
@@ -48,7 +54,7 @@ impl MomentService {
         let tx = get_conn().await;
         let mut table=MomentDTO::default();
         table.set_id(id as u16);
-        table.set_is_published(is_published.u32() as u8);
+        table.set_is_published(is_published);
        let row = MomentDTO::update_by_column(&tx, &table, "id").await?;
        Ok(row.rows_affected)
     }
@@ -78,5 +84,17 @@ impl MomentService {
           return  Some(moment);
         }
         None
+    }
+
+    pub async fn moment_like(id: u16) -> Result<u64, rbatis::rbdc::Error> {
+        let executor = get_conn().await;
+        let mut table =
+            Moment::select_by_column(&executor, "id", id.to_string().as_str()).await?;
+        for item in table.iter_mut() {
+            item.likes += 1;
+            let query = MomentDao::update_likes(item.id.unwrap_or_default(), item.likes).await?;
+            return Ok(query);
+        }
+        Ok(0)
     }
 }

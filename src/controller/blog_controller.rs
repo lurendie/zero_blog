@@ -1,7 +1,7 @@
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::result::Result;
 use crate::service;
-use actix_web::web::{Json, Path, Query};
+use actix_web::web::{Json, Query};
 use actix_web::{routes, HttpResponse, Responder};
 use rbs::{to_value, Value};
 use service::BlogService;
@@ -113,21 +113,4 @@ pub async fn search_blog(query: Query<HashMap<String, String>>) -> impl Responde
     //查找title内容的文章
     let result = to_value!(BlogService::search_blog(blog_title).await);
     Result::ok("请求成功".to_string(), Some(result)).ok_json()
-}
-
-#[routes]
-#[post("/moment/like/{id}")]
-pub async fn moment_like(id: Path<u16>) -> impl Responder {
-    if *id <= 0 {
-        return Result::error("参数有误!".to_string()).error_json();
-    }
-    let result = BlogService::moment_like(*id).await;
-    if let Ok(row) = result {
-        if row > 0 {
-            return Result::ok("点赞成功".to_string(), Some(to_value!(row))).ok_json();
-        } else {
-            return Result::error("点赞失败".to_string()).error_json();
-        }
-    }
-    Result::error("参数有误!".to_string()).error_json()
 }
