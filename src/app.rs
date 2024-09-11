@@ -96,7 +96,8 @@ impl AppServer {
                         .service(admin::moment_controller::delete_moment)
                         .service(admin::moment_controller::get_moment_by_id)
                         .service(admin::moment_controller::update_moment)
-                        .service(admin::moment_controller::create_moment),
+                        .service(admin::moment_controller::create_moment)
+                        .service(admin::category_controller::categories),
                 )
                 .default_service(web::to(index_controller::default))
         })

@@ -6,6 +6,7 @@
  * @FilePath: \zero_blog\src\service\category_service.rs
  */
 
+use rbatis::{Page, PageRequest};
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
@@ -14,12 +15,13 @@ use crate::dao::{BlogDao, CategoryDao};
 use crate::models::vo::categorie::Categorie;
 use crate::models::vo::serise::Series;
 use crate::service::RedisService;
+use crate::rbatis::get_conn;
 
 pub struct CategoryService;
 
 impl CategoryService {
     /**
-     * 查询所有分类
+     * 查询所有分类(首页)
      */
     pub async fn get_list() -> Vec<Value> {
         //1.查询Redis
@@ -90,5 +92,11 @@ impl CategoryService {
             ))
         });
         list
+    }
+
+    //查询所有分类(后台)     
+    pub async fn get_page_categories(page_num:u64, page_size:u64) -> Result<Page<Categorie>,rbatis::rbdc::Error> {
+    let page =  Categorie::select_page(&get_conn().await, &PageRequest::new(page_num, page_size)).await?;
+    Ok(page)
     }
 }
