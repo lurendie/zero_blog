@@ -31,8 +31,8 @@ impl AppServer {
     pub async fn run(conf: &'static Config) -> std::io::Result<()> {
         let (storage, factory) = JWT::create::<AppClaims>();
         //创建JWT
-        let jwt_ttl = JwtTtl(Duration::days(1));
-        let refresh_ttl = RefreshTtl(Duration::days(1));
+        let jwt_ttl = JwtTtl(Duration::days(conf.server.token_expires));
+        let refresh_ttl = RefreshTtl(Duration::days(conf.server.token_expires));
         HttpServer::new(move || {
             // 配置 CORS
             // let cors = Cors::default()

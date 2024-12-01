@@ -45,6 +45,7 @@ pub struct Server {
     pub port: u16,             //端口
     pub host: String,          //IP地址
     pub front_adderss: String, //前端页面地址
+    pub token_expires: i64,    //token 过期时间
 }
 pub static CONFIG: OnceCell<Config> = OnceCell::new();
 
