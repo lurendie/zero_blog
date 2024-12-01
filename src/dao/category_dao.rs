@@ -2,6 +2,7 @@ use rbs::to_value;
 
 use crate::models::category::Category;
 use crate::rbatis::RBATIS;
+use crate::rbatis::get_conn;
 
 pub struct CategoryDao;
 
@@ -50,5 +51,30 @@ impl CategoryDao {
 
         let category = RBATIS.query_decode::<Category>(&sql, args).await;
         category
+    }
+
+    /**
+     * 保存分类信息
+     */
+    
+    pub async fn save_category(category: &Category) -> Result<u64, rbatis::rbdc::Error> {
+       let result = Category::insert(&get_conn().await, category).await?;
+         Ok(result.rows_affected)
+    }
+    
+    /**
+     * 更新分类信息
+     */
+    pub async fn update_category(category: &Category) ->  Result<u64, rbatis::rbdc::Error> {
+        let result = Category::update_by_column(&get_conn().await, category, "id").await?;
+        Ok(result.rows_affected)
+    }
+    
+    /**
+     * 删除分类信息
+     */
+    pub async fn delete_category( category: &Category) ->  Result<u64, rbatis::rbdc::Error> {
+        let result=  Category::delete_by_column(&get_conn().await, "id", category.get_id()).await?;
+        Ok(result.rows_affected)
     }
 }

@@ -93,7 +93,7 @@ impl BlogDao {
         blog.*
         from blog where blog.category_id = ?  order by create_time desc limit ?,?";
         let args = vec![
-            to_value!(category.id),
+            to_value!(category.get_id()),
             to_value!((page_num as u64 - 1) * page_size),
             to_value!(page_size),
         ];
@@ -101,7 +101,7 @@ impl BlogDao {
         let sql = "select 
         count(blog.id)
         from blog where blog.category_id = ?  order by create_time desc";
-        let args = vec![to_value!(category.id)];
+        let args = vec![to_value!(category.get_id())];
         let count_query = RBATIS
             .query_decode::<u64>(&sql, args)
             .await

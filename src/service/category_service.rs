@@ -13,6 +13,7 @@ use rbs::{to_value, Value};
 use crate::constant::redis_key_constants;
 use crate::dao::{BlogDao, CategoryDao};
 use crate::models::vo::categorie::Categorie;
+use crate::models::category::Category;
 use crate::models::vo::serise::Series;
 use crate::service::RedisService;
 use crate::rbatis::get_conn;
@@ -69,11 +70,11 @@ impl CategoryService {
         let mut series = vec![];
 
         for item in CategoryDao::get_list().await {
-            legend.push(to_value!(item.name.clone()));
+            legend.push(to_value!(item.get_name()));
             let series_item = Series::new(
-                item.id,
-                item.name.clone(),
-                BlogDao::get_category_count(item.name).await,
+                item.get_id(),
+                item.get_name().to_string(),
+                BlogDao::get_category_count(item.get_name().to_string()).await,
             );
             series.push(series_item);
         }
@@ -86,8 +87,8 @@ impl CategoryService {
         let mut list = vec![];
         CategoryDao::get_list().await.iter().for_each(|item| {
             list.push(Categorie::new(
-                Some(item.id.clone()),
-                item.name.clone(),
+                Some(item.get_id().clone()),
+                item.get_name().to_string(),
                 vec![],
             ))
         });
@@ -98,5 +99,24 @@ impl CategoryService {
     pub async fn get_page_categories(page_num:u64, page_size:u64) -> Result<Page<Categorie>,rbatis::rbdc::Error> {
     let page =  Categorie::select_page(&get_conn().await, &PageRequest::new(page_num, page_size)).await?;
     Ok(page)
+    }
+
+    pub async fn insert_category(name: String) -> Result<u64,rbatis::rbdc::Error> {
+        let mut category = Category::default();
+        category.set_name(name);
+        let id = CategoryDao::save_category(&category).await?;
+        Ok(id)
+    }
+
+    pub async fn update_category(category:Category) -> Result<u64,rbatis::rbdc::Error> {
+        let id = CategoryDao::update_category(&category).await?;
+        Ok(id)
+    }
+
+    pub async fn delete_category(id: u16) -> Result<u64,rbatis::rbdc::Error> {
+        let mut category = Category::default();
+        category.set_id(id);
+        let id = CategoryDao::delete_category( &category).await?;
+        Ok(id)
     }
 }

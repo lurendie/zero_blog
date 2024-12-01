@@ -2,12 +2,8 @@
 name = "zero_blog"
 version = "0.1.0"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[[bin]]
-name = "zero_blog"
-path = "src/bin/app_dev.rs"
 
 [profile.release]
 opt-level = 3
@@ -38,7 +34,7 @@ rand = "0.8"                                                      #随机数
 rbdc-mysql = { version = "4.5.8" }
 rbs = { version = "4.5" }
 redis = { version = "0.25.3", features = ["tokio-comp", "json"] } #redis 异步IO
-actix-jwt-session = "1.0.5"
+actix-jwt-session = {path = "../actix-jwt-session"}
 regex = "1"
 comrak = "0.26.0"
 slug = "0.1.5"

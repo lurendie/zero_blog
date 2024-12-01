@@ -4,6 +4,7 @@ use actix_jwt_session::Authenticated;
 use actix_web::{routes, web, Responder};
 use rbatis::{IPage, IPageRequest};
 use rbs::{to_value, Value};
+use crate::models::category::Category;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::result::Result;
 use crate::middleware::AppClaims;
@@ -34,3 +35,28 @@ pub async fn categories(_:Authenticated<AppClaims>,params:web::Query<SearchReque
     
     }
 }
+
+/**
+ * 修改分类
+ */
+#[routes]
+#[put("/category")]
+ pub async fn update_category(_:Authenticated<AppClaims>,form:web::Json<Category>) -> impl Responder {
+    //参数校验
+    if form.get_id() ==0&& form.get_name().is_empty(){
+        return  Result::error("参数有误!".to_string()).error_json();
+    }
+    match form.get_id() == 0 {
+         //新增分类
+        true =>{
+           let _ =CategoryService::insert_category(form.get_name().to_string()).await;
+          return  Result::ok_no_data("新增分类成功!".to_string()).ok_json();
+        }
+        //修改分类
+        false=>{
+          let _ =  CategoryService::update_category(form.0).await;
+            return  Result::ok_no_data("修改分类成功!".to_string()).ok_json();
+        }
+
+    }
+ }
