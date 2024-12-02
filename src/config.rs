@@ -10,15 +10,15 @@ use std::fs;
 //配置文件结构体
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-    pub server: Server,
-    pub mysql: MysqlCon, //Mysql链接
-    pub redis: ReidsCon, //Redis
+    pub server: ServerConfig,
+    pub mysql: MysqlConfig, //Mysql链接
+    pub redis: ReidsConfig, //Redis
 }
 /**
  * Redis 连接信息结构体
  */
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct ReidsCon {
+pub struct ReidsConfig {
     pub port: u16,    //端口
     pub host: String, //IP地址
     pub db: u16,
@@ -30,7 +30,7 @@ pub struct ReidsCon {
  * MySQL 配置信息结构体
  */
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct MysqlCon {
+pub struct MysqlConfig {
     pub port: u16,    //端口
     pub host: String, //IP地址
     pub data_base: String,
@@ -41,7 +41,7 @@ pub struct MysqlCon {
  * Server 配置信息结构体
  */
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Server {
+pub struct ServerConfig {
     pub port: u16,             //端口
     pub host: String,          //IP地址
     pub front_adderss: String, //前端页面地址
