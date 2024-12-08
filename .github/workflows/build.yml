@@ -11,17 +11,17 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            rust: nightly
+            rust: stable
             target: x86_64-unknown-linux-gnu
             archive-name: zero-linux.tar.gz
           - build: macos
             os: macos-latest
-            rust: nightly
+            rust: stable
             target: x86_64-apple-darwin
             archive-name: zero-macos.tar.gz
           - build: windows
             os: windows-2019
-            rust: nightly-x86_64-msvc
+            rust: stable-x86_64-msvc
             target: x86_64-pc-windows-msvc
             archive-name: zero-windows.7z
       fail-fast: false
@@ -61,7 +61,7 @@ jobs:
             tar -czf "${{ matrix.archive-name }}" LICENSE README.MD zero_blog
           fi
       - name: Upload archive
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.archive-name }}
           path: archive/${{ matrix.archive-name }}
