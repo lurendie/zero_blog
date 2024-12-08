@@ -73,7 +73,7 @@ impl CategoryDao {
     /**
      * 删除分类信息
      */
-    pub async fn delete_category( category: &Category) ->  Result<u64, rbatis::rbdc::Error> {
+    pub async  fn delete_category( category: &Category) ->  Result<u64, rbatis::rbdc::Error> {
         let result=  Category::delete_by_column(&get_conn().await, "id", category.get_id()).await?;
         Ok(result.rows_affected)
     }

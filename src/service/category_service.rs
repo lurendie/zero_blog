@@ -97,26 +97,22 @@ impl CategoryService {
 
     //查询所有分类(后台)     
     pub async fn get_page_categories(page_num:u64, page_size:u64) -> Result<Page<Categorie>,rbatis::rbdc::Error> {
-    let page =  Categorie::select_page(&get_conn().await, &PageRequest::new(page_num, page_size)).await?;
-    Ok(page)
+    Categorie::select_page(&get_conn().await, &PageRequest::new(page_num, page_size)).await
     }
 
     pub async fn insert_category(name: String) -> Result<u64,rbatis::rbdc::Error> {
         let mut category = Category::default();
         category.set_name(name);
-        let id = CategoryDao::save_category(&category).await?;
-        Ok(id)
+        CategoryDao::save_category(&category).await
     }
 
     pub async fn update_category(category:Category) -> Result<u64,rbatis::rbdc::Error> {
-        let id = CategoryDao::update_category(&category).await?;
-        Ok(id)
+          CategoryDao::update_category(&category).await   
     }
 
     pub async fn delete_category(id: u16) -> Result<u64,rbatis::rbdc::Error> {
         let mut category = Category::default();
         category.set_id(id);
-        let id = CategoryDao::delete_category( &category).await?;
-        Ok(id)
+        CategoryDao::delete_category( &category).await
     }
 }

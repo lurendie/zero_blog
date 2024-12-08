@@ -12,7 +12,9 @@ use crate::service::CategoryService;
 
 
 
-
+/**
+ * 获取分类列表
+ */
 #[routes]
 #[get("/categories")]
 pub async fn categories(_:Authenticated<AppClaims>,params:web::Query<SearchRequest>)-> impl Responder{
@@ -60,3 +62,19 @@ pub async fn categories(_:Authenticated<AppClaims>,params:web::Query<SearchReque
 
     }
  }
+
+ /**
+  * 删除分类
+  */
+  #[routes]
+  #[delete("/category/{id}")]
+  pub async fn delete_category(_:Authenticated<AppClaims>,id:web::Path<u16>) -> impl Responder {
+    match CategoryService::delete_category(id.into_inner()).await {
+        Ok(_) => {
+            Result::ok_no_data("删除分类成功!".to_string()).ok_json()
+        }
+        Err(e) => {
+            Result::error(e.to_string()).error_json()
+        }
+    }
+  }

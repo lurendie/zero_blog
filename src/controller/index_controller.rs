@@ -37,5 +37,5 @@ pub async fn site() -> impl Responder {
 
 pub async fn default() -> impl Responder {
     //error!("404,找不到页面");
-    HttpResponse::Ok().json(to_value!(Result::<String>::error(String::from("未找到接口"))))
+    HttpResponse::Ok().json(to_value!(Result::<String>::error(String::from("Error Not Found"))))
 }
