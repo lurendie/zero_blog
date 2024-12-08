@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install Rust
-      run: rustup install stable
+      run: rustup install stable-1.81.0
     - name: Build
       run: cargo build --release
     - name: Run tests
