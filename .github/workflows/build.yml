@@ -61,7 +61,7 @@ jobs:
             tar -czf "${{ matrix.archive-name }}" LICENSE README.MD zero_blog
           fi
       - name: Upload archive
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.archive-name }}
           path: archive/${{ matrix.archive-name }}
