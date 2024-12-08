@@ -28,7 +28,7 @@ pub async fn categories(_:Authenticated<AppClaims>,params:web::Query<SearchReque
             map.insert(to_value!("pageSize"), to_value!(data.page_size()));
             map.insert(to_value!("pages"), to_value!(data.pages()));
             map.insert(to_value!("total"), to_value!(data.total()));
-            map.insert(to_value!("list"), to_value!(data.get_records()));
+            map.insert(to_value!("list"), to_value!(data.records()));
             Result::<Value>::ok("获取成功!".to_string(), Some(to_value!(map))).ok_json()
         }
         Err(e) => {

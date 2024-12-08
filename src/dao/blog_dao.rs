@@ -5,7 +5,7 @@ use crate::models::vo::{blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::models::{category::Category, tag::Tag};
 use crate::rbatis::RBATIS;
 
-use rbatis::{Error, IPage, Page, PageRequest};
+use rbatis::{Error, Page, PageRequest};
 use rbs::to_value;
 
 pub struct BlogDao;
@@ -23,7 +23,7 @@ impl BlogDao {
         .await
         .unwrap_or_else(|e: rbatis::Error| {
             log::error!("{e}",);
-            Page::new(0, 0)
+            Page::new(0, 0,0,vec![])
         });
         Ok(page)
     }
@@ -327,9 +327,9 @@ impl BlogDao {
         let rusult_page = Page::new(
             page_args.get_page_num() as u64,
             page_args.get_page_size() as u64,
-        )
-        .set_records(records)
-        .set_total(total);
+            total as u64,
+            records
+        );
         Ok(rusult_page)
     }
 }

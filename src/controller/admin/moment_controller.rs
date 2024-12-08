@@ -5,7 +5,7 @@ use crate::models::{Result,vo::page_request::SearchRequest};
 use crate::service::MomentService;
 use actix_jwt_session::Authenticated;
 use actix_web::{routes, web, Responder};
-use rbatis::{IPage, IPageRequest};
+use rbatis::{IPage,  IPageRequest};
 use rbs::value::map::ValueMap;
 use rbs::to_value;
 
@@ -36,7 +36,7 @@ pub async fn moments(_:Authenticated<AppClaims>, query:web::Query<SearchRequest>
     value_map.insert(to_value!("pageSize"), to_value!(page_list.page_size()));
     value_map.insert(to_value!("pages"), to_value!(page_list.pages()));
     value_map.insert(to_value!("total"), to_value!(page_list.total()));
-    value_map.insert(to_value!("list"), to_value!(page_list.get_records()));
+    value_map.insert(to_value!("list"), to_value!(page_list.records()));
     Result::ok("请求成功".to_string(), Some(to_value!(value_map))).ok_json() // 返回一个包含map的JSON响应
     
 }
