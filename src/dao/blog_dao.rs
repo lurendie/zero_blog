@@ -23,7 +23,7 @@ impl BlogDao {
         .await
         .unwrap_or_else(|e: rbatis::Error| {
             log::error!("{e}",);
-            Page::new(0, 0,0,vec![])
+            Page::new(0, 0, 0, vec![])
         });
         Ok(page)
     }
@@ -328,9 +328,22 @@ impl BlogDao {
             page_args.get_page_num() as u64,
             page_args.get_page_size() as u64,
             total as u64,
-            records
+            records,
         );
         Ok(rusult_page)
+    }
+
+    /**
+     * 根据分类id查询博文详情
+     */
+    pub async fn get_blog_by_category_id(category_id: u16) -> Result<u64, Error> {
+        let sql = format!(
+            "select count(*) from blog where category_id = {}",
+            category_id
+        );
+        let args = vec![to_value!(category_id)];
+        let count = RBATIS.query_decode::<u64>(sql.as_str(), args).await?;
+        Ok(count)
     }
 }
 

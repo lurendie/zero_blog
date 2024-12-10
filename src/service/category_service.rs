@@ -12,11 +12,11 @@ use rbs::{to_value, Value};
 
 use crate::constant::redis_key_constants;
 use crate::dao::{BlogDao, CategoryDao};
-use crate::models::vo::categorie::Categorie;
 use crate::models::category::Category;
+use crate::models::vo::categorie::Categorie;
 use crate::models::vo::serise::Series;
-use crate::service::RedisService;
 use crate::rbatis::get_conn;
+use crate::service::RedisService;
 
 pub struct CategoryService;
 
@@ -95,24 +95,32 @@ impl CategoryService {
         list
     }
 
-    //查询所有分类(后台)     
-    pub async fn get_page_categories(page_num:u64, page_size:u64) -> Result<Page<Categorie>,rbatis::rbdc::Error> {
-    Categorie::select_page(&get_conn().await, &PageRequest::new(page_num, page_size)).await
+    //查询所有分类(后台)
+    pub async fn get_page_categories(
+        page_num: u64,
+        page_size: u64,
+    ) -> Result<Page<Categorie>, rbatis::rbdc::Error> {
+        Categorie::select_page(&get_conn().await, &PageRequest::new(page_num, page_size)).await
     }
 
-    pub async fn insert_category(name: String) -> Result<u64,rbatis::rbdc::Error> {
+    pub async fn insert_category(name: String) -> Result<u64, rbatis::rbdc::Error> {
         let mut category = Category::default();
         category.set_name(name);
         CategoryDao::save_category(&category).await
     }
 
-    pub async fn update_category(category:Category) -> Result<u64,rbatis::rbdc::Error> {
-          CategoryDao::update_category(&category).await   
+    pub async fn update_category(category: Category) -> Result<u64, rbatis::rbdc::Error> {
+        CategoryDao::update_category(&category).await
     }
 
-    pub async fn delete_category(id: u16) -> Result<u64,rbatis::rbdc::Error> {
+    pub async fn delete_category(id: u16) -> Result<u64, rbatis::rbdc::Error> {
         let mut category = Category::default();
         category.set_id(id);
-        CategoryDao::delete_category( &category).await
+        //判断分类是否有文章
+        let count = BlogDao::get_blog_by_category_id(category.get_id()).await?;
+        if count > 0 {
+            return Err(rbatis::rbdc::Error::from("分类下有文章，不能删除"));
+        }
+        CategoryDao::delete_category(&category).await
     }
 }

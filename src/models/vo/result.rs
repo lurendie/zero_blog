@@ -44,6 +44,15 @@ impl<T> Result<T> {
             data: None,
         }
     }
+
+    pub fn new_bad_request(msg: String) -> Result<T> {
+        //400 Bad Request
+        Result {
+            code: 400,
+            msg,
+            data: None,
+        }
+    }
 }
 //针对于ValueMap具体实现
 impl Result<Value> {
@@ -63,10 +72,21 @@ impl Result<Value> {
             .content_type(mime::TEXT_HTML_UTF_8)
             .json(&self)
     }
+
+    pub fn bad_request_json(&self) -> HttpResponse {
+        HttpResponse::Ok()
+            .status(StatusCode::BAD_REQUEST)
+            .content_type(mime::TEXT_HTML_UTF_8)
+            .json(&self)
+    }
 }
 
 impl<T: Debug> std::fmt::Display for Result<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {},{:?})", self.code, self.msg, self.data)
+        write!(
+            f,
+            "Result:code:{},msg: {}, data:{:?}",
+            self.code, self.msg, self.data
+        )
     }
 }
