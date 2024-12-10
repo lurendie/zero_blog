@@ -1,10 +1,4 @@
-/*
- * @Author: lurendie 
- * @Date: 2024-03-26 00:08:12
- * @LastEditors: lurendie
- * @LastEditTime: 2024-04-26 00:07:05
- * @FilePath: \zero_blog\src\log4rs.rs
- */
+
 use chrono::Local;
 #[derive(Default)]
 pub struct Log4rs;

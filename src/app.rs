@@ -31,8 +31,8 @@ impl AppServer {
     pub async fn run(conf: &'static Config) -> std::io::Result<()> {
         let (storage, factory) = JWT::create::<AppClaims>();
         //创建JWT
-        let jwt_ttl = JwtTtl(Duration::days(1));
-        let refresh_ttl = RefreshTtl(Duration::days(1));
+        let jwt_ttl = JwtTtl(Duration::days(conf.server.token_expires));
+        let refresh_ttl = RefreshTtl(Duration::days(conf.server.token_expires));
         HttpServer::new(move || {
             // 配置 CORS
             // let cors = Cors::default()
@@ -74,7 +74,7 @@ impl AppServer {
                 .service(blog_controller::check_blog_password)
                 .service(user_controller::login)
                 .service(blog_controller::search_blog)
-                .service(blog_controller::moment_like)
+                .service(moment_controller::moment_like)
                 //admin
                 .service(
                     web::scope("/admin")
@@ -90,7 +90,16 @@ impl AppServer {
                         .service(admin::blog_controller::blog)
                         .service(admin::blog_controller::update_blog)
                         .service(admin::blog_controller::create_blog)
-                        .service(admin::blog_controller::delete_blog),
+                        .service(admin::blog_controller::delete_blog)
+                        .service(admin::moment_controller::moments)
+                        .service(admin::moment_controller::moment_published)
+                        .service(admin::moment_controller::delete_moment)
+                        .service(admin::moment_controller::get_moment_by_id)
+                        .service(admin::moment_controller::update_moment)
+                        .service(admin::moment_controller::create_moment)
+                        .service(admin::category_controller::categories)
+                        .service(admin::category_controller::update_category)
+                        .service(admin::category_controller::delete_category),
                 )
                 .default_service(web::to(index_controller::default))
         })

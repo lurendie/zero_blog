@@ -1,14 +1,15 @@
 use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize)]
+use crate::service::CommonService;
+#[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct MomentDTO {
-    id: Option<u64>,
+    id: Option<u16>,
     pub(crate) content: Option<String>,
     #[serde(rename(deserialize = "createTime"))]
     pub(crate) create_time: Option<String>,
     pub(crate) likes: Option<u64>,
-    #[serde(rename(deserialize = "published"))]
-    pub(crate) is_published: Option<u8>,
+    #[serde(rename(deserialize = "published"),  deserialize_with = "CommonService::bool_from_int")]
+    pub(crate) is_published: bool,
 }
 
 impl MomentDTO {
@@ -16,7 +17,7 @@ impl MomentDTO {
         content: Option<String>,
         create_time: Option<String>,
         likes: Option<u64>,
-        is_published: Option<u8>,
+        is_published: bool,
     ) -> Self {
         Self {
             id: None,
@@ -27,10 +28,10 @@ impl MomentDTO {
         }
     }
 
-    pub fn set_id(&mut self, id: u64) {
+    pub fn set_id(&mut self, id: u16) {
         self.id = Some(id);
     }   
-    pub fn get_id(&self) -> Option<u64> {
+    pub fn get_id(&self) -> Option<u16> {
         self.id
     }
 
@@ -59,12 +60,12 @@ impl MomentDTO {
         self.likes = Some(likes);
     }
 
-    pub fn get_is_published(&self) -> Option<u8> {
+    pub fn get_is_published(&self) -> bool {
         self.is_published
     }
 
-    pub fn set_is_published(&mut self, is_published: u8) {
-        self.is_published = Some(is_published);
+    pub fn set_is_published(&mut self, is_published: bool) {
+        self.is_published = is_published;
     }
 }
 crud!(MomentDTO {}, "moment");

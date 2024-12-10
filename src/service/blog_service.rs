@@ -4,7 +4,6 @@ use crate::constant::redis_key_constants;
 use crate::dao::BlogDao;
 use crate::dao::{CategoryDao, TagDao};
 use crate::models::dto::blog_dto::BlogDto;
-use crate::models::dto::moment_dto::MomentDTO;
 use crate::models::vo::blog_visibility::BlogVisibility;
 use crate::models::vo::blog_vo::BlogVO;
 use crate::models::vo::page_request::SearchRequest;
@@ -49,15 +48,15 @@ impl BlogService {
         let page_list: Page<BlogInfo>;
         page_list = match BlogDao::get_blog_pages(page_num, blog_info_constants::PAGE_SIZE).await {
             Ok(mut ok) => {
-                BlogService::bloginfo_handle(ok.get_records_mut()).await;
+                BlogService::bloginfo_handle(&mut ok.records).await;
                 ok
             }
             Err(e) => {
                 log::error!("BlogList查询失败:{:?}", e);
-                Page::new(0, 0)
+                Page::new(0, 0, 0, vec![])
             }
         };
-        map.insert("list".to_string(), to_value!(page_list.get_records()));
+        map.insert("list".to_string(), to_value!(&page_list.records));
         map.insert("totalPage".to_string(), to_value!(page_list.pages()));
         //4.如果数据库查询不是Null 存放到Redis中
         log::info!(
@@ -65,7 +64,7 @@ impl BlogService {
             redis_key_constants::HOME_BLOG_INFO_LIST,
             page_num
         );
-        if !page_list.get_records().is_empty() {
+        if !&page_list.records().is_empty() {
             let _ = RedisService::set_hash_key(
                 redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
                 page_num.to_string(),
@@ -199,24 +198,22 @@ impl BlogService {
         let page_list: Page<BlogInfo> =
             match BlogDao::get_by_category(name, page_num, blog_info_constants::PAGE_SIZE).await {
                 Ok(mut ok) => {
-                    BlogService::bloginfo_handle(ok.get_records_mut()).await;
+                    BlogService::bloginfo_handle(&mut ok.records).await;
                     ok
                 }
                 Err(e) => {
                     log::error!("BlogList查询失败:{}", e);
-                    Page::new(0, 0)
+                    Page::new(0, 0, 0, vec![])
                 }
             };
 
-        map.insert("list".to_string(), to_value!(page_list.get_records()));
+        map.insert("list".to_string(), to_value!(&page_list.records));
         map.insert("totalPage".to_string(), to_value!(page_list.pages()));
         map
     }
     //根据ID查找博文
     pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
-        let mut blog = BlogDao::get_by_id(id)
-            .await
-            .unwrap_or_else(|| BlogDetail::new());
+        let mut blog = BlogDao::get_by_id(id).await?;
         blog.content = MarkdownParser::parser_html(&blog.content);
         Some(blog)
     }
@@ -227,15 +224,15 @@ impl BlogService {
         let page_list: Page<BlogInfo> =
             match BlogDao::get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await {
                 Ok(mut ok) => {
-                    BlogService::bloginfo_handle(ok.get_records_mut()).await;
+                    BlogService::bloginfo_handle(&mut ok.records).await;
                     ok
                 }
                 Err(e) => {
                     log::error!("BlogList查询失败:{}", e);
-                    Page::new(0, 0)
+                    Page::new(0, 0, 0, vec![])
                 }
             };
-        map.insert("list".to_string(), to_value!(page_list.get_records()));
+        map.insert("list".to_string(), to_value!(&page_list.records));
         map.insert("totalPage".to_string(), to_value!(page_list.pages()));
         map
     }
@@ -305,7 +302,7 @@ impl BlogService {
             }
             item.password = Some(String::from(""));
             //转HTML
-            item.description =MarkdownParser::parser_html(&item.description);
+            item.description = MarkdownParser::parser_html(&item.description);
             let tags = TagDao::get_blog_tags(id).await;
             item.tags = Some(tags);
             item.create_time = item.create_time.as_str()[0..19].to_string();
@@ -331,9 +328,9 @@ impl BlogService {
             .await
             .unwrap_or_else(|opt| {
                 log::error!("{:?}", opt);
-                Page::new(0, 0)
+                Page::new(0, 0, 0, vec![])
             });
-        for item in page_list.get_records_mut() {
+        for item in page_list.records.iter_mut() {
             if item.get_password().is_none() {
                 item.set_password(Some(""));
             }
@@ -347,7 +344,7 @@ impl BlogService {
         map.insert(to_value!("pageSize"), to_value!(page_list.page_size()));
         map.insert(to_value!("pages"), to_value!(page_list.pages()));
         map.insert(to_value!("total"), to_value!(page_list.total()));
-        map.insert(to_value!("list"), to_value!(page_list.get_records()));
+        map.insert(to_value!("list"), to_value!(page_list.records));
         map
     }
 
@@ -435,8 +432,8 @@ impl BlogService {
 
             // 更新添加标签
             let mut add_tags: Vec<u16> = vec![];
-           for value in query.get_tag_list().unwrap_or_default(){
-                match value{
+            for value in query.get_tag_list().unwrap_or_default() {
+                match value {
                     Value::U64(id) => {
                         add_tags.push(id as u16);
                     }
@@ -446,8 +443,8 @@ impl BlogService {
                     Value::I32(id) => {
                         add_tags.push(id as u16);
                     }
-                    Value::String(name)=>{
-                        let id =TagService::add_tag(name).await.unwrap_or_default();
+                    Value::String(name) => {
+                        let id = TagService::add_tag(name).await.unwrap_or_default();
                         add_tags.push(id);
                     }
                     _ => {
@@ -456,9 +453,9 @@ impl BlogService {
                             .await
                             .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
                         return false;
-                    }  
+                    }
                 }
-           }
+            }
 
             if !BlogTagService::inser_tags(add_tags, new_id, &mut tx).await {
                 tx.rollback()
@@ -478,8 +475,8 @@ impl BlogService {
 
             // 标签处理
             let mut add_tags = vec![];
-            for value in query.get_tag_list().unwrap_or_default(){
-                match value{
+            for value in query.get_tag_list().unwrap_or_default() {
+                match value {
                     Value::U64(id) => {
                         add_tags.push(id as u16);
                     }
@@ -489,8 +486,8 @@ impl BlogService {
                     Value::I32(id) => {
                         add_tags.push(id as u16);
                     }
-                    Value::String(name)=>{
-                        let id =TagService::add_tag(name).await.unwrap_or_default();
+                    Value::String(name) => {
+                        let id = TagService::add_tag(name).await.unwrap_or_default();
                         add_tags.push(id);
                     }
                     _ => {
@@ -499,12 +496,10 @@ impl BlogService {
                             .await
                             .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
                         return false;
-                    }  
+                    }
                 }
-           }
-            
-            
-            
+            }
+
             let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
             let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
 
@@ -622,18 +617,6 @@ impl BlogService {
                 vec![]
             }
         }
-    }
-
-    pub(crate) async fn moment_like(id: u16) -> Result<u64, rbatis::rbdc::Error> {
-        let executor = get_conn().await;
-        let mut table =
-            MomentDTO::select_by_column(&executor, "id", id.to_string().as_str()).await?;
-        for item in table.iter_mut() {
-            item.set_likes(item.get_likes() + 1);
-            let query = MomentDTO::update_by_column(&executor, &item, "id").await?;
-            return Ok(query.rows_affected);
-        }
-        Ok(0)
     }
 }
 

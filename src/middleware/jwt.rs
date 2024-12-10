@@ -3,7 +3,6 @@ use actix_jwt_session::deadpool_redis;
 use actix_jwt_session::SessionMiddlewareFactory;
 use actix_jwt_session::SessionStorage;
 use actix_jwt_session::JWT_HEADER_NAME;
-
 use serde::Deserialize;
 
 use serde::Serialize;
@@ -60,7 +59,7 @@ impl JWT {
             // Check if header "Authorization" exists and contains Bearer with encoded JWT
             .with_jwt_header(JWT_HEADER_NAME)
             // Check if cookie "jwt" exists and contains encoded JWT
-            // .with_jwt_cookie(JWT_COOKIE_NAME)
+            //.with_jwt_cookie(JWT_COOKIE_NAME)
             //.with_refresh_header(REFRESH_HEADER_NAME)
             // Check if cookie "jwt" exists and contains encoded JWT
             //.with_refresh_cookie(REFRESH_COOKIE_NAME)

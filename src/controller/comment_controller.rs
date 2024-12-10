@@ -27,7 +27,7 @@ pub(crate) async fn get_comments(data: Option<Query<SearchRequest>>) -> impl Res
         page_request.get_blog_id(),
     )
     .await;
-    comments.insert("list".into(), to_value!(list.get_records()));
+    comments.insert("list".into(), to_value!(list.records()));
     comments.insert("totalPage".into(), rbs::Value::U64(list.pages()));
     let mut data = ValueMap::new();
     data.insert("comments".into(), to_value!(comments));

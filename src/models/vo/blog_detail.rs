@@ -33,7 +33,7 @@ pub struct BlogDetail {
 }
 
 impl BlogDetail {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn _new() -> Self {
         BlogDetail::default()
     }
 }

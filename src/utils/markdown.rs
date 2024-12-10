@@ -18,7 +18,6 @@ impl MarkdownParser {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{self, Write};
 
     use comrak::{
          markdown_to_html_with_plugins, Options, Plugins,

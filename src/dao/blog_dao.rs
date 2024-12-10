@@ -5,7 +5,7 @@ use crate::models::vo::{blog_detail::BlogDetail, blog_info::BlogInfo};
 use crate::models::{category::Category, tag::Tag};
 use crate::rbatis::RBATIS;
 
-use rbatis::{Error, IPage, Page, PageRequest};
+use rbatis::{Error, Page, PageRequest};
 use rbs::to_value;
 
 pub struct BlogDao;
@@ -23,7 +23,7 @@ impl BlogDao {
         .await
         .unwrap_or_else(|e: rbatis::Error| {
             log::error!("{e}",);
-            Page::new(0, 0)
+            Page::new(0, 0, 0, vec![])
         });
         Ok(page)
     }
@@ -93,7 +93,7 @@ impl BlogDao {
         blog.*
         from blog where blog.category_id = ?  order by create_time desc limit ?,?";
         let args = vec![
-            to_value!(category.id),
+            to_value!(category.get_id()),
             to_value!((page_num as u64 - 1) * page_size),
             to_value!(page_size),
         ];
@@ -101,7 +101,7 @@ impl BlogDao {
         let sql = "select 
         count(blog.id)
         from blog where blog.category_id = ?  order by create_time desc";
-        let args = vec![to_value!(category.id)];
+        let args = vec![to_value!(category.get_id())];
         let count_query = RBATIS
             .query_decode::<u64>(&sql, args)
             .await
@@ -327,10 +327,23 @@ impl BlogDao {
         let rusult_page = Page::new(
             page_args.get_page_num() as u64,
             page_args.get_page_size() as u64,
-        )
-        .set_records(records)
-        .set_total(total);
+            total as u64,
+            records,
+        );
         Ok(rusult_page)
+    }
+
+    /**
+     * 根据分类id查询博文详情
+     */
+    pub async fn get_blog_by_category_id(category_id: u16) -> Result<u64, Error> {
+        let sql = format!(
+            "select count(*) from blog where category_id = {}",
+            category_id
+        );
+        let args = vec![to_value!(category_id)];
+        let count = RBATIS.query_decode::<u64>(sql.as_str(), args).await?;
+        Ok(count)
     }
 }
 

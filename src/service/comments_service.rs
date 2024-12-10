@@ -1,7 +1,7 @@
 use crate::rbatis::RBATIS;
-use rbatis::{IPage, Page};
-
 use crate::{dao::CommentDao, models::vo::comment::Comment};
+use rbatis::IPage;
+use rbatis::Page;
 //每页显示5条博客简介
 const PAGE_SIZE: u64 = 5;
 
@@ -18,10 +18,10 @@ impl CommentService {
             .await
             .unwrap_or_else(|e| {
                 log::error!("get_comments_page 异常:{e}");
-                Page::new(0, 0)
+                Page::new(0, 0, 0, vec![])
             });
         //获取当前对象子评论
-        for item in page.get_records_mut() {
+        for item in page.records_mut() {
             item.reply_comments = Some(CommentDao::get_comments(item.id.unwrap()).await.unwrap());
         }
         page

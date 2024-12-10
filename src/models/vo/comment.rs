@@ -1,4 +1,4 @@
-use crate::models::blog::bool_from_int;
+use crate::service::CommonService;
 use rbatis::{crud, impl_select, impl_select_page};
 use serde::{Deserialize, Serialize};
 //评论
@@ -10,9 +10,12 @@ pub struct Comment {
     pub(crate) avatar: String,
     #[serde(rename(serialize = "createTime"))]
     pub(crate) create_time: String,
-    // #[serde(deserialize_with = "bool_from_int")]
+    // #[serde(deserialize_with = "CommonService::bool_from_int")]
     // pub(crate) is_published: bool,
-    #[serde(deserialize_with = "bool_from_int", rename(serialize = "adminComment"))]
+    #[serde(
+        deserialize_with = "CommonService::bool_from_int",
+        rename(serialize = "adminComment")
+    )]
     pub(crate) is_admin_comment: bool,
     #[serde(rename(serialize = "parentCommentId"))]
     pub(crate) parent_comment_id: Option<i16>,
