@@ -23,7 +23,7 @@ jobs:
       run: cargo test --release
 
     - name: Strip binary
-      run: strip "target/x86_64-unknown-linux-gnu/release/zero_blog" 
+      run: strip "target/release/zero_blog" 
        
     - name: Build archive
       shell: bash
@@ -31,7 +31,7 @@ jobs:
           mkdir archive
           cp LICENSE README.MD archive/
           cd archive
-          cp "../target/x86_64-unknown-linux-gnu/release/zero_blog" ./
+          cp "../target/release/zero_blog" ./
           tar -czf "zero-linux.tar.gz" LICENSE README.MD zero_blog
 
     - name: Upload archive
