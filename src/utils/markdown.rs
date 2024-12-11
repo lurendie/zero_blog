@@ -8,7 +8,7 @@ use std::io::{self, Write};
 pub struct MarkdownParser;
 impl MarkdownParser {
     pub fn parser_html(markdown: &str) -> String {
-        let adapter = CustomHeadingAdapter;
+        let adapter = CustomHeadingAdapter::new();
         let options = Options::default();
         let mut plugins = Plugins::default();
         plugins.render.heading_adapter = Some(&adapter);
@@ -19,9 +19,7 @@ impl MarkdownParser {
 #[cfg(test)]
 mod tests {
 
-    use comrak::{
-         markdown_to_html_with_plugins, Options, Plugins,
-    };
+    use comrak::{markdown_to_html_with_plugins, Options, Plugins};
 
     use super::CustomHeadingAdapter;
 
@@ -58,6 +56,12 @@ mod tests {
 }
 
 struct CustomHeadingAdapter;
+
+impl CustomHeadingAdapter {
+    fn new() -> Self {
+        Self
+    }
+}
 
 impl HeadingAdapter for CustomHeadingAdapter {
     fn enter(

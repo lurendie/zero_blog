@@ -11,10 +11,10 @@ use std::collections::HashMap;
 #[routes]
 //#[options("/site")]
 #[get("/blogs")]
-pub async fn blogs(mut params: Query<SearchRequest>) -> impl Responder {
+pub async fn blogs(params: Query<SearchRequest>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
     if params.get_page_num() <= 0 {
-        params.set_page_num(Some(1));
+        return Result::error("参数有误!".to_string()).error_json();
     };
     let page = BlogService::get_blog_list_by_is_published(params.get_page_num() as u64).await;
     let result: Result<HashMap<String, Value>> =
@@ -24,17 +24,27 @@ pub async fn blogs(mut params: Query<SearchRequest>) -> impl Responder {
 #[routes]
 #[get("/blog")]
 pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
+    //获取blog_id参数   不是必要参数，如果没有，则返回参数有误的错误信息
     let id: u16 = match params.get("id") {
-        Some(id) => id.parse().expect("转换失败"),
-        None => 0,
+        Some(id) => id.parse().unwrap_or_else(|e| {
+            log::warn!("/blog 参数有误! id={} error={}", id, e);
+            0
+        }),
+        None => return Result::error("参数有误!".to_string()).error_json(),
     };
     //如果id<=0，则返回参数有误的错误信息
     if id <= 0 {
         return Result::error("参数有误!".to_string()).error_json();
     }
     let blog = BlogService::get_by_id(id).await;
-    let result = Result::new(200, "请求成功".to_string(), blog);
-    HttpResponse::Ok().json(result)
+    match blog {
+        Ok(blog) => {
+            return Result::ok("请求成功".to_string(), Some(to_value!(blog))).ok_json();
+        }
+        Err(e) => {
+            return Result::error(e.to_string()).error_json();
+        }
+    }
 }
 #[routes]
 #[get("/category")]
@@ -85,7 +95,7 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
 pub async fn check_blog_password(data: Json<SearchRequest>) -> impl Responder {
     if data.get_blog_id() > 0 {
         let blog_info = BlogService::get_by_id(data.get_blog_id()).await;
-        if let Some(blog_info) = &blog_info {
+        if let Ok(blog_info) = &blog_info {
             if let Some(password) = &blog_info.password {
                 if *password == data.get_password() {
                     return Result::ok(

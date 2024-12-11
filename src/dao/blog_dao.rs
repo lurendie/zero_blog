@@ -119,13 +119,14 @@ impl BlogDao {
         Ok(page)
     }
 
-    pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
-        let blog_detail =
-            BlogDetail::select_by_id(&RBATIS.acquire().await.unwrap(), id.to_string()).await;
-        blog_detail.unwrap_or_else(|e| {
-            log::error!("{e}");
-            None
-        })
+    pub(crate) async fn get_by_id(id: u16) -> Result<BlogDetail, rbatis::rbdc::Error> {
+        let result =
+            BlogDetail::select_by_id(&RBATIS.acquire().await.unwrap(), id.to_string()).await?;
+        if let Some(blog) = result {
+            Ok(blog)
+        } else {
+            Err(rbatis::rbdc::Error::from("查询博文失败"))
+        }
     }
 
     //根据标签名称查询该分类博文(降序 分页)

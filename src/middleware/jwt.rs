@@ -1,5 +1,6 @@
 use actix_jwt_session::deadpool_redis;
 
+use actix_jwt_session::Extractors;
 use actix_jwt_session::SessionMiddlewareFactory;
 use actix_jwt_session::SessionStorage;
 use actix_jwt_session::JWT_HEADER_NAME;
@@ -56,8 +57,8 @@ impl JWT {
         let (storage, factory) = SessionMiddlewareFactory::<T>::build_ed_dsa()
             // pass redis connection
             .with_redis_pool(redis.clone())
+            .with_extractors(Extractors::default().with_jwt_header(JWT_HEADER_NAME))
             // Check if header "Authorization" exists and contains Bearer with encoded JWT
-            .with_jwt_header(JWT_HEADER_NAME)
             // Check if cookie "jwt" exists and contains encoded JWT
             //.with_jwt_cookie(JWT_COOKIE_NAME)
             //.with_refresh_header(REFRESH_HEADER_NAME)

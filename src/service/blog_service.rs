@@ -212,10 +212,10 @@ impl BlogService {
         map
     }
     //根据ID查找博文
-    pub(crate) async fn get_by_id(id: u16) -> Option<BlogDetail> {
+    pub(crate) async fn get_by_id(id: u16) -> Result<BlogDetail, rbatis::rbdc::Error> {
         let mut blog = BlogDao::get_by_id(id).await?;
         blog.content = MarkdownParser::parser_html(&blog.content);
-        Some(blog)
+        Ok(blog)
     }
 
     //根据tag名称查询博文
