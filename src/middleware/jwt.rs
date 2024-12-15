@@ -1,5 +1,3 @@
-use actix_jwt_session::deadpool_redis;
-
 use actix_jwt_session::Extractors;
 use actix_jwt_session::SessionMiddlewareFactory;
 use actix_jwt_session::SessionStorage;
@@ -7,6 +5,8 @@ use actix_jwt_session::JWT_HEADER_NAME;
 use serde::Deserialize;
 
 use serde::Serialize;
+
+use crate::redis::REDIS_CL_IENT;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -47,16 +47,10 @@ impl actix_jwt_session::Claims for AppClaims {
 pub struct JWT;
 impl JWT {
     pub fn create<T: actix_jwt_session::Claims>() -> (SessionStorage, SessionMiddlewareFactory<T>) {
-        let redis = deadpool_redis::Config::from_url(format!(
-            "redis://{}:{}@{}:{}/{}",
-            "", "", "127.0.0.1", 6379, 0,
-        ))
-        .create_pool(Some(deadpool_redis::Runtime::Tokio1))
-        .unwrap();
         // create new [SessionStorage] and [SessionMiddlewareFactory]
         let (storage, factory) = SessionMiddlewareFactory::<T>::build_ed_dsa()
             // pass redis connection
-            .with_redis_pool(redis.clone())
+            .with_redis_pool(REDIS_CL_IENT.clone())
             .with_extractors(Extractors::default().with_jwt_header(JWT_HEADER_NAME))
             // Check if header "Authorization" exists and contains Bearer with encoded JWT
             // Check if cookie "jwt" exists and contains encoded JWT

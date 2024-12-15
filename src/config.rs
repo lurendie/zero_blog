@@ -23,7 +23,7 @@ pub struct ReidsConfig {
     pub db: u16,
     pub username: String,
     pub password: String,
-    pub ttl: String,
+    pub ttl: i64,
 }
 /**
  * MySQL 配置信息结构体

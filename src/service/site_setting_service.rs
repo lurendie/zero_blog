@@ -14,7 +14,7 @@ impl SiteSettingService {
         //查询缓存
         let cache_result =
             RedisService::get_value_map(redis_key_constants::SITE_INFO_MAP.to_string()).await;
-        if let Some(cache_result) = cache_result {
+        if let Ok(cache_result) = cache_result {
             log::info!("key:{}数据存在", redis_key_constants::SITE_INFO_MAP);
             return cache_result;
         }

@@ -35,7 +35,7 @@ impl BlogService {
         )
         .await;
         //2.缓存不未Null则返回返回
-        if let Some(redis_cache) = redis_cache {
+        if let Ok(redis_cache) = redis_cache {
             log::info!(
                 "key:{} page:{} 数据存在",
                 redis_key_constants::HOME_BLOG_INFO_LIST,
