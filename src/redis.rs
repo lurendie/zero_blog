@@ -1,14 +1,18 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
+
 use redis::Client;
 
-use crate::config;
+use crate::config::CONFIG;
 
 //Redis客户端
-pub static REDIS: Lazy<Client> = Lazy::new(|| {
-    let conf = config::default();
+pub static REDIS: LazyLock<Client> = LazyLock::new(|| {
     let client = redis::Client::open(format!(
         "redis://{}:{}@{}:{}/{}",
-        conf.redis.username, conf.redis.password, conf.redis.host, conf.redis.port, conf.redis.db
+        CONFIG.redis.username,
+        CONFIG.redis.password,
+        CONFIG.redis.host,
+        CONFIG.redis.port,
+        CONFIG.redis.db
     ))
     .unwrap();
     // client.get_connection();

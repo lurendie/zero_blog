@@ -20,7 +20,7 @@ use actix_web::{
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 use serde::Deserialize;
-use crate::config;
+use crate::config::CONFIG;
 
 #[derive(Deserialize)]
 struct SignInPayload {
@@ -39,7 +39,6 @@ pub async fn login(
 ) -> impl Responder {
     //验证账号 密码是否正确
     let mut user = UserService::get_by_username(&user_form.username).await;
-    let conf =config::default();
     if let Some(user) = user.as_mut() {
         //验证账号密码是否正确,排除非Admin账号登录
         if user_form.password != user.get_password() || user.get_role() != "ROLE_admin" {
@@ -53,7 +52,7 @@ pub async fn login(
             user.set_password("".to_string());
             map.insert(to_value!("user"), to_value!(user));
             map.insert(to_value!("token"), to_value!(token.clone()));
-            map.insert(to_value!("expires"), to_value!(conf.server.token_expires));
+            map.insert(to_value!("expires"), to_value!(CONFIG.server.token_expires));
             let result = Result::<Value>::ok("请求成功".to_string(), Some(to_value!(map)));
             return HttpResponse::Ok()
                 .append_header((JWT_HEADER_NAME, token.clone()))
@@ -81,7 +80,7 @@ pub async fn login(
         user.set_password("".to_string());
         map.insert(to_value!("user"), to_value!(user));
         map.insert(to_value!("token"), to_value!(pair.jwt.encode().unwrap()));
-        map.insert(to_value!("expires"), to_value!(conf.server.token_expires));
+        map.insert(to_value!("expires"), to_value!(CONFIG.server.token_expires));
         let result = Result::<Value>::ok("请求成功".to_string(), Some(to_value!(map)));
         return HttpResponse::Ok()
             .append_header((JWT_HEADER_NAME, pair.jwt.encode().unwrap()))

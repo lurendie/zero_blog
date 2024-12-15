@@ -4,9 +4,8 @@
  * @LastEditors: lurendie
  * @LastEditTime: 2024-05-17 12:18:04
  */
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::{fs, sync::LazyLock};
 //配置文件结构体
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -47,13 +46,7 @@ pub struct ServerConfig {
     pub front_adderss: String, //前端页面地址
     pub token_expires: i64,    //token 过期时间
 }
-pub static CONFIG: OnceCell<Config> = OnceCell::new();
-
-pub fn default() -> &'static Config {
-    CONFIG.get_or_init(|| {
-        let yaml_str =
-            fs::read_to_string("./config/config.yaml").expect("Failed to read config.yaml");
-        let config: Config = serde_yaml::from_str(&yaml_str).expect("Failed to parse config.yaml");
-        config
-    })
-}
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
+    let yaml_str = fs::read_to_string("./config/config.yaml").expect("Failed to read config.yaml");
+    serde_yaml::from_str::<Config>(&yaml_str).expect("Failed to parse config.yaml")
+});

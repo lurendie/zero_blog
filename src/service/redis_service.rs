@@ -134,22 +134,14 @@ impl RedisService {
      * 设置key的过期时间
      */
     pub fn expire(key: String) {
-        //获取配置
-        match CONFIG.get() {
-            Some(config) => {
-                //获取连接
-                if let Ok(redis) = REDIS.get_connection() {
-                    let mut con: Box<dyn ConnectionLike> = Box::new(redis);
-                    redis::cmd("EXPIRE")
-                        .arg(&[key, config.redis.ttl.clone()])
-                        .execute(con.as_mut());
-                } else {
-                    log::error!("redis连接失败")
-                }
-            }
-            None => {
-                log::error!("cofnig配置不存在")
-            }
+        //获取连接
+        if let Ok(redis) = REDIS.get_connection() {
+            let mut con: Box<dyn ConnectionLike> = Box::new(redis);
+            redis::cmd("EXPIRE")
+                .arg(&[key, CONFIG.redis.ttl.clone()])
+                .execute(con.as_mut());
+        } else {
+            log::error!("redis连接失败")
         }
     }
 }

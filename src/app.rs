@@ -3,7 +3,7 @@
  * @Date: 2024-03-26 00:08:12
  * @LastEditors: lurendie
  */
-use crate::config::Config;
+use crate::config::CONFIG;
 use crate::controller::{
     about_controller, admin, archive_controller, blog_controller, comment_controller,
     friend_controller, index_controller, moment_controller, user_controller,
@@ -28,11 +28,11 @@ impl AppServer {
     /**
      * run 服务启动
      */
-    pub async fn run(conf: &'static Config) -> std::io::Result<()> {
+    pub async fn run() -> std::io::Result<()> {
         let (storage, factory) = JWT::create::<AppClaims>();
         //创建JWT
-        let jwt_ttl = JwtTtl(Duration::days(conf.server.token_expires));
-        let refresh_ttl = RefreshTtl(Duration::days(conf.server.token_expires));
+        let jwt_ttl = JwtTtl(Duration::days(CONFIG.server.token_expires));
+        let refresh_ttl = RefreshTtl(Duration::days(CONFIG.server.token_expires));
         HttpServer::new(move || {
             // 配置 CORS
             // let cors = Cors::default()
@@ -103,7 +103,7 @@ impl AppServer {
                 )
                 .default_service(web::to(index_controller::default))
         })
-        .bind(format!("{}:{}", conf.server.host, conf.server.port))?
+        .bind(format!("{}:{}", CONFIG.server.host, CONFIG.server.port))?
         .run()
         .await
     }
