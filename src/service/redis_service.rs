@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::redis::REDIS_CL_IENT;
+use crate::redis;
 use crate::CONFIG;
 use deadpool_redis::redis::AsyncCommands;
 use rbs::Value;
@@ -17,8 +17,8 @@ impl RedisService {
         hash: String,
     ) -> Result<HashMap<String, Value>, Box<dyn Error>> {
         //1.获取连接
-        let mut con = REDIS_CL_IENT.get().await?;
-        let redis_reuslt = con
+        let mut connection = redis::get_connection().await?;
+        let redis_reuslt = connection
             .hget::<String, String, String>(key.to_owned(), hash.to_owned())
             .await?;
         Ok(serde_json::from_str::<HashMap<String, Value>>(
@@ -31,23 +31,35 @@ impl RedisService {
      */
     pub async fn set_hash_key(key: String, hash: String, value: &HashMap<String, Value>) {
         //redis序列化
-        let value_str = serde_json::to_string(&value).unwrap();
-        let mut con = REDIS_CL_IENT.get().await.unwrap();
-        con.hset::<String, String, String, String>(key.clone(), hash, value_str)
-            .await
-            .unwrap();
-        RedisService::set_expire(key).await;
+        let value_str = serde_json::to_string(&value).unwrap_or_default();
+        match redis::get_connection().await {
+            Ok(mut connection) => {
+                let _ = connection
+                    .hset::<String, String, String, String>(key.clone(), hash, value_str)
+                    .await;
+                RedisService::set_expire(key).await;
+            }
+            Err(e) => {
+                log::error!("redis 设置key{}获取连接异常:{}", key, e);
+            }
+        }
     }
     /**
      * Set `key` `value`字符串
      */
     pub async fn set_value_map(key: String, value: &HashMap<String, Value>) {
         //1.序列化
-        let value_str = serde_json::to_string(&value).unwrap();
+        let value_str = serde_json::to_string(&value).unwrap_or_default();
         //2.获取连接
-        let mut con = REDIS_CL_IENT.get().await.unwrap();
-        let _ = con.set::<String, String, String>(key.clone(), value_str);
-        RedisService::set_expire(key).await;
+        match redis::get_connection().await {
+            Ok(mut connection) => {
+                let _ = connection
+                    .set::<String, String, String>(key.clone(), value_str)
+                    .await;
+                RedisService::set_expire(key).await;
+            }
+            Err(e) => log::error!("redis 设置key{}获取连接异常:{}", key, e),
+        }
     }
 
     /**
@@ -55,11 +67,15 @@ impl RedisService {
      */
     pub async fn get_value_map(key: String) -> Result<HashMap<String, Value>, Box<dyn Error>> {
         //1.获取连接
-        let mut con = REDIS_CL_IENT.get().await?;
-        let result = con.get::<String, String>(key).await?;
-        Ok(serde_json::from_str::<HashMap<String, Value>>(
-            result.as_str(),
-        )?)
+        match redis::get_connection().await {
+            Ok(mut connection) => {
+                let result = connection.get::<String, String>(key).await?;
+                Ok(serde_json::from_str::<HashMap<String, Value>>(
+                    result.as_str(),
+                )?)
+            }
+            Err(e) => Err(Box::new(e)),
+        }
     }
 
     /**
@@ -77,7 +93,7 @@ impl RedisService {
             return;
         }
         //2.获取连接
-        match REDIS_CL_IENT.get().await {
+        match redis::get_connection().await {
             //3.获取连接成功
             Ok(mut con) => {
                 //4.设置数据
@@ -87,7 +103,7 @@ impl RedisService {
             }
             //获取连接失败
             Err(e) => {
-                log::error!("redis get connection error  set_value_vec:{}", e);
+                log::error!("redis 设置key{}获取连接异常:{}", key, e);
             }
         }
     }
@@ -97,23 +113,24 @@ impl RedisService {
      */
     pub async fn get_value_vec(key: String) -> Option<Value> {
         //1.获取连接
-        match REDIS_CL_IENT.get().await {
+        match redis::get_connection().await {
             //2.获取连接成功
-            Ok(mut con) => {
+            Ok(mut connection) => {
                 //3.获取数据
-                let result = con.get::<String, String>(key).await.unwrap_or_else(|e| {
-                    log::error!("redis get key error:{}", e);
-                    String::new()
-                });
-                if result.is_empty() {
-                    return None;
+                match connection.get::<String, String>(key.clone()).await {
+                    Ok(result) => {
+                        //redis 反序列化
+                        Some(serde_json::from_str(result.as_str()).unwrap_or_default())
+                    }
+                    Err(e) => {
+                        log::error!("redis {}反序列化错误：{}", key, e);
+                        None
+                    }
                 }
-                //redis 反序列化
-                Some(serde_json::from_str(result.as_str()).unwrap_or_default())
             }
             //获取连接失败
             Err(e) => {
-                log::error!("redis get connection error  get_value_vec:{}", e);
+                log::error!("redis 设置key{}获取连接异常:{}", key, e);
                 None
             }
         }
@@ -124,13 +141,10 @@ impl RedisService {
      */
     pub async fn set_expire(key: String) {
         //获取连接
-        if let Ok(mut redis) = REDIS_CL_IENT.get().await {
-            redis
-                .expire::<String, i64>(key, CONFIG.redis.ttl)
-                .await
-                .unwrap();
+        if let Ok(mut redis) = redis::get_connection().await {
+            let _ = redis.expire::<String, i64>(key, CONFIG.redis.ttl).await;
         } else {
-            log::error!("redis连接失败")
+            log::error!("设置key{}的过期时间失败", key);
         }
     }
 }

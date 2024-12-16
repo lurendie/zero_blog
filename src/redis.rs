@@ -1,8 +1,8 @@
+use crate::config::CONFIG;
+use deadpool_redis::{Config, Pool, PoolError, Runtime};
 use std::sync::LazyLock;
 
-use crate::config::CONFIG;
-
-pub static REDIS_URL: LazyLock<String> = LazyLock::new(|| {
+static REDIS_URL: LazyLock<String> = LazyLock::new(|| {
     format!(
         "redis://{}:{}@{}:{}/{}",
         CONFIG.redis.username,
@@ -14,23 +14,40 @@ pub static REDIS_URL: LazyLock<String> = LazyLock::new(|| {
 });
 
 //Redis客户端
-pub static REDIS_CL_IENT: LazyLock<deadpool_redis::Pool> = LazyLock::new(|| {
-    let client = deadpool_redis::Config::from_url(REDIS_URL.as_str())
-        .create_pool(Some(deadpool_redis::Runtime::Tokio1))
-        .unwrap();
+pub static REDIS_CL_IENT: LazyLock<Pool> = LazyLock::new(|| {
+    match Config::from_url(REDIS_URL.as_str()).create_pool(Some(Runtime::Tokio1)) {
+        Ok(client) => client,
+        Err(e) => {
+            //log::error!("redis连接池创建失败！ 错误信息：{}", e);
+            panic!("redis连接池创建失败！ 错误信息：{}", e);
+        }
+    }
     // client.get_connection();
-    // log::info!("redis连接初始化完成！");
-    client
+    // log::info!("redis客户端初始化完成！");
 });
 
-// pub async fn get_redis_client() -> deadpool_redis::Connection {
-//     REDIS_CL_IENT
-//         .timeout_get(&deadpool_redis::::::config::Timeouts::wait_millis(
-//             5000,
-//         ))
-//         .await
-//         .expect("redis连接超时！")
-// }
+/**
+ * 获取redis连接 如没有获取到连接则返回None
+ */
+pub async fn get_connection() -> Result<deadpool_redis::Connection, PoolError> {
+    match REDIS_CL_IENT.get().await {
+        Ok(conn) => Ok(conn),
+        Err(e) => Err(e),
+    }
+}
+
+/**
+ * 获取redis连接 如5000ms内没有获取到连接则返回None
+ */
+pub async fn _timeout_get_connection() -> Result<deadpool_redis::Connection, PoolError> {
+    match REDIS_CL_IENT
+        .timeout_get(&deadpool_redis::Timeouts::wait_millis(5000))
+        .await
+    {
+        Ok(conn) => Ok(conn),
+        Err(e) => Err(e),
+    }
+}
 
 // //redis 单元测试
 // #[cfg(test)]
