@@ -20,8 +20,8 @@ impl TagService {
         if let Some(redis_cache) = redis_cache {
             let arr = match redis_cache {
                 Value::Array(arr) => {
-                    log::error!(
-                        "key:{} 数据存在",
+                    log::info!(
+                        "reids KEY:{} 获取缓存数据成功",
                         redis_key_constants::TAG_CLOUD_LIST.to_string()
                     );
                     arr
@@ -99,14 +99,13 @@ impl TagService {
     /**
      * 添加标签
      */
-    pub async fn add_tag(name: String) -> Result<u16,rbatis::Error> {
+    pub async fn add_tag(name: String) -> Result<u16, rbatis::Error> {
         let mut tag = TagVO::default();
         tag.name = name;
         let result = TagVO::insert(&RBATIS.acquire().await.unwrap(), &tag).await;
         //添加标签
         match result {
-            Ok(id) =>  
-            match id.last_insert_id {
+            Ok(id) => match id.last_insert_id {
                 Value::U32(id) => Ok(id as u16),
                 _ => {
                     log::error!("获取新插入的id失败");
@@ -119,6 +118,4 @@ impl TagService {
             }
         }
     }
-
-
 }

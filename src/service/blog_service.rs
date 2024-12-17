@@ -37,7 +37,7 @@ impl BlogService {
         //2.缓存不未Null则返回返回
         if let Ok(redis_cache) = redis_cache {
             log::info!(
-                "key:{} page:{} 数据存在",
+                "reids KEY:{} 当前页：{} 获取缓存数据成功",
                 redis_key_constants::HOME_BLOG_INFO_LIST,
                 page_num
             );
@@ -59,11 +59,6 @@ impl BlogService {
         map.insert("list".to_string(), to_value!(&page_list.records));
         map.insert("totalPage".to_string(), to_value!(page_list.pages()));
         //4.如果数据库查询不是Null 存放到Redis中
-        log::info!(
-            "key:{} page:{} 数据不存在",
-            redis_key_constants::HOME_BLOG_INFO_LIST,
-            page_num
-        );
         if !&page_list.records().is_empty() {
             let _ = RedisService::set_hash_key(
                 redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
@@ -84,8 +79,8 @@ impl BlogService {
         if let Some(redis_cache) = redis_cache {
             let arr = match redis_cache {
                 Value::Array(arr) => {
-                    log::error!(
-                        "key:{} 数据存在",
+                    log::info!(
+                        "reids KEY:{} 获取缓存数据成功",
                         redis_key_constants::RANDOM_BLOG_LIST.to_string()
                     );
                     arr
@@ -117,10 +112,6 @@ impl BlogService {
                         }
                     }
                 }
-                log::info!(
-                    "key:{} 数据不存在",
-                    redis_key_constants::RANDOM_BLOG_LIST.to_string()
-                );
                 //保存到Redis
                 RedisService::set_value_vec(
                     redis_key_constants::RANDOM_BLOG_LIST.to_string(),
@@ -146,8 +137,8 @@ impl BlogService {
         if let Some(redis_cache) = redis_cache {
             let arr = match redis_cache {
                 Value::Array(arr) => {
-                    log::error!(
-                        "key:{} 数据存在",
+                    log::info!(
+                        "reids KEY:{} 获取缓存数据成功",
                         redis_key_constants::NEW_BLOG_LIST.to_string()
                     );
                     arr
@@ -173,10 +164,7 @@ impl BlogService {
                         result.push(to_value!(list[i].clone()));
                     }
                 }
-                log::info!(
-                    "key:{} 数据不存在",
-                    redis_key_constants::NEW_BLOG_LIST.to_string()
-                );
+
                 //保存到Redis
                 RedisService::set_value_vec(
                     redis_key_constants::NEW_BLOG_LIST.to_string(),

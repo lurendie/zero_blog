@@ -31,8 +31,8 @@ impl CategoryService {
         if let Some(result) = result {
             let arr = match result {
                 Value::Array(arr) => {
-                    log::error!(
-                        "key:{} 数据存在",
+                    log::info!(
+                        "reids KEY:{} 获取缓存数据成功",
                         redis_key_constants::CATEGORY_NAME_LIST.to_string()
                     );
                     arr
@@ -49,10 +49,6 @@ impl CategoryService {
             .for_each(|item| result.push(to_value!(item)));
 
         //3.保存Redis
-        log::info!(
-            "key:{} 数据不存在",
-            redis_key_constants::CATEGORY_NAME_LIST.to_string()
-        );
         RedisService::set_value_vec(
             redis_key_constants::CATEGORY_NAME_LIST.to_string(),
             &to_value!(&result),

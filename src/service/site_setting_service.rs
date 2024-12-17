@@ -15,7 +15,10 @@ impl SiteSettingService {
         let cache_result =
             RedisService::get_value_map(redis_key_constants::SITE_INFO_MAP.to_string()).await;
         if let Ok(cache_result) = cache_result {
-            log::info!("key:{}数据存在", redis_key_constants::SITE_INFO_MAP);
+            log::info!(
+                "reids KEY:{} 获取缓存数据成功",
+                redis_key_constants::SITE_INFO_MAP
+            );
             return cache_result;
         }
 
@@ -74,7 +77,6 @@ impl SiteSettingService {
         map.insert("siteInfo".to_string(), to_value!(site_info));
         map.insert("badges".to_string(), to_value!(badges));
         //缓存数据
-        log::info!("key:{}数据不存在", redis_key_constants::SITE_INFO_MAP);
         RedisService::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await;
         map
     }

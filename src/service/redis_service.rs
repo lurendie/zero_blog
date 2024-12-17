@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::enums::DataBaseError;
 use crate::redis;
 use crate::CONFIG;
 use deadpool_redis::redis::AsyncCommands;
 use rbs::Value;
-use std::error::Error;
 
 pub struct RedisService;
 
@@ -15,9 +15,18 @@ impl RedisService {
     pub async fn get_hash_key(
         key: String,
         hash: String,
-    ) -> Result<HashMap<String, Value>, Box<dyn Error>> {
+    ) -> Result<HashMap<String, Value>, Box<dyn std::error::Error>> {
         //1.获取连接
         let mut connection = redis::get_connection().await?;
+        //2.判断key是否存在
+        if !connection
+            .exists::<String, bool>(key.clone())
+            .await
+            .unwrap_or(false)
+        {
+            log::info!("redis 数据 KEY: {}不存在", key);
+            return Err(Box::new(DataBaseError::Unknown));
+        }
         let redis_reuslt = connection
             .hget::<String, String, String>(key.to_owned(), hash.to_owned())
             .await?;
@@ -65,7 +74,9 @@ impl RedisService {
     /**
      * 获取`key`字符串
      */
-    pub async fn get_value_map(key: String) -> Result<HashMap<String, Value>, Box<dyn Error>> {
+    pub async fn get_value_map(
+        key: String,
+    ) -> Result<HashMap<String, Value>, Box<dyn std::error::Error>> {
         //1.获取连接
         match redis::get_connection().await {
             Ok(mut connection) => {
@@ -90,6 +101,7 @@ impl RedisService {
         let value_str = serde_json::to_string(value).unwrap_or_default();
         //判断转换字符串是否为空
         if value_str.is_empty() {
+            log::error!("redis 设置key{}的value为空", key);
             return;
         }
         //2.获取连接
@@ -97,7 +109,9 @@ impl RedisService {
             //3.获取连接成功
             Ok(mut con) => {
                 //4.设置数据
-                let _ = con.set::<String, String, String>(key.clone(), value_str);
+                let _ = con
+                    .set::<String, String, String>(key.clone(), value_str)
+                    .await;
                 //5.设置过期时间
                 RedisService::set_expire(key).await;
             }
@@ -116,7 +130,16 @@ impl RedisService {
         match redis::get_connection().await {
             //2.获取连接成功
             Ok(mut connection) => {
-                //3.获取数据
+                //3.a.判断key是否存在
+                if !connection
+                    .exists::<String, bool>(key.clone())
+                    .await
+                    .unwrap_or(false)
+                {
+                    log::info!("redis 数据 KEY: {}不存在", key);
+                    return None;
+                }
+                //4.获取数据
                 match connection.get::<String, String>(key.clone()).await {
                     Ok(result) => {
                         //redis 反序列化
