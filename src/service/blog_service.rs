@@ -606,6 +606,11 @@ impl BlogService {
             }
         }
     }
+
+    pub async fn check_category_exist_blog(category_id: u16) -> bool {
+        let count = BlogDao::get_count_by_category_id(category_id).await.unwrap_or_default();
+        count > 0
+    }   
 }
 
 #[cfg(test)]

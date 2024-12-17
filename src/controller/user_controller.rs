@@ -6,6 +6,7 @@
  *
  */
 
+use crate::config::CONFIG;
 use crate::models::Result;
 use crate::{middleware::AppClaims, service::UserService};
 use actix_jwt_session::{
@@ -20,7 +21,6 @@ use actix_web::{
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 use serde::Deserialize;
-use crate::config::CONFIG;
 
 #[derive(Deserialize)]
 struct SignInPayload {
@@ -91,5 +91,6 @@ pub async fn login(
             )
             .json(result);
     }
+    log::error!("用户不存在!");
     HttpResponse::Unauthorized().json(Result::<Value>::error("权限认证失败!".to_string()))
 }

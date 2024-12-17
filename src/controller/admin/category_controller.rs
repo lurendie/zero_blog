@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::middleware::AppClaims;
 use crate::models::category::Category;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::result::Result;
 use crate::service::CategoryService;
+use crate::{middleware::AppClaims, service::BlogService};
 use actix_jwt_session::Authenticated;
 use actix_web::{routes, web, Responder};
 use rbatis::{IPage, IPageRequest};
@@ -86,9 +86,15 @@ pub async fn delete_category(
         }
         None => return Result::new_bad_request("参数有误!".to_string()).bad_request_json(),
     };
-
-    match CategoryService::delete_category(id).await {
-        Ok(_) => Result::ok_no_data("删除分类成功!".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).error_json(),
+    // 查询分类下是否有文章
+    match BlogService::check_category_exist_blog(id).await {
+        true => return Result::error("分类下存在文章,不能删除!".to_string()).error_json(),
+        false => {
+            // 删除分类
+            match CategoryService::delete_category(id).await {
+                Ok(_) => Result::ok_no_data("删除分类成功!".to_string()).ok_json(),
+                Err(e) => Result::error(e.to_string()).error_json(),
+            }
+        }
     }
 }

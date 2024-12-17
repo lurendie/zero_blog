@@ -1,3 +1,3 @@
-mod error;
+mod data_base_error;
 
-pub use error::DataBaseError;
+pub use data_base_error::DataBaseError;

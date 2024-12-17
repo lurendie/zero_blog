@@ -24,7 +24,7 @@ impl RedisService {
             .await
             .unwrap_or(false)
         {
-            log::info!("redis 数据 KEY: {}不存在", key);
+            log::info!("redis KEY: {} 没有检索到数据 ", key);
             return Err(Box::new(DataBaseError::Unknown));
         }
         let redis_reuslt = connection
@@ -49,7 +49,7 @@ impl RedisService {
                 RedisService::set_expire(key).await;
             }
             Err(e) => {
-                log::error!("redis 设置key{}获取连接异常:{}", key, e);
+                log::error!("redis 设置key:{} 获取连接异常:{}", key, e);
             }
         }
     }
@@ -67,7 +67,7 @@ impl RedisService {
                     .await;
                 RedisService::set_expire(key).await;
             }
-            Err(e) => log::error!("redis 设置key{}获取连接异常:{}", key, e),
+            Err(e) => log::error!("redis 设置key:{} 获取连接异常:{}", key, e),
         }
     }
 
@@ -136,7 +136,7 @@ impl RedisService {
                     .await
                     .unwrap_or(false)
                 {
-                    log::info!("redis 数据 KEY: {}不存在", key);
+                    log::info!("redis KEY: {} 没有检索到数据 ", key);
                     return None;
                 }
                 //4.获取数据
@@ -146,14 +146,14 @@ impl RedisService {
                         Some(serde_json::from_str(result.as_str()).unwrap_or_default())
                     }
                     Err(e) => {
-                        log::error!("redis {}反序列化错误：{}", key, e);
+                        log::error!("redis {} 反序列化错误：{}", key, e);
                         None
                     }
                 }
             }
             //获取连接失败
             Err(e) => {
-                log::error!("redis 设置key{}获取连接异常:{}", key, e);
+                log::error!("redis 设置key: {} 获取连接异常:{}", key, e);
                 None
             }
         }
@@ -167,7 +167,7 @@ impl RedisService {
         if let Ok(mut redis) = redis::get_connection().await {
             let _ = redis.expire::<String, i64>(key, CONFIG.redis.ttl).await;
         } else {
-            log::error!("设置key{}的过期时间失败", key);
+            log::error!("设置key: {} 的过期时间失败", key);
         }
     }
 }

@@ -346,6 +346,19 @@ impl BlogDao {
         let count = RBATIS.query_decode::<u64>(sql.as_str(), args).await?;
         Ok(count)
     }
+
+    /**
+     * 根据分类id查询博文数量
+     */
+    pub async fn get_count_by_category_id(category_id: u16) -> Result<u64, Error> {
+        let sql = format!(
+            "select count(*) from blog where category_id = {}",
+            category_id
+        );
+        let args = vec![to_value!(category_id)];
+        let count = RBATIS.query_decode::<u64>(sql.as_str(), args).await?;
+        Ok(count)
+    }
 }
 
 #[cfg(test)]
