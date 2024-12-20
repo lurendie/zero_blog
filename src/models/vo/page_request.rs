@@ -7,7 +7,7 @@
  */
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Default, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct SearchRequest {
     #[serde(rename = "pageNum")]
     page_num: Option<u16>,
@@ -23,6 +23,20 @@ pub struct SearchRequest {
     title: Option<String>,
     #[serde(rename = "categoryId")]
     category_id: Option<u16>,
+}
+
+impl Default for SearchRequest {
+    fn default() -> Self {
+        Self {
+            page_num: Some(1),
+            page_size: Some(10),
+            page: None,
+            blog_id: None,
+            password: None,
+            title: None,
+            category_id: None,
+        }
+    }
 }
 
 impl SearchRequest {

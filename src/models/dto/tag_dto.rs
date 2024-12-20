@@ -1,4 +1,4 @@
-use rbatis::crud;
+use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagVO {
@@ -18,3 +18,4 @@ impl Default for TagVO {
     }
 }
 crud!(TagVO {}, "tag");
+impl_select_page!(TagVO{get_tags_by_page()=>""}, "tag");

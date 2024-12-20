@@ -1,3 +1,4 @@
+use rbatis::{Page, PageRequest};
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
 
@@ -117,5 +118,21 @@ impl TagService {
                 Err(err)
             }
         }
+    }
+
+    /**
+     * 查询标签 by page
+     */
+    pub async fn get_tags_by_page(
+        page_num: u64,
+        page_size: u64,
+    ) -> Result<Page<TagVO>, rbatis::Error> {
+        let page = PageRequest::new(page_num, page_size).set_do_count(true);
+        let result = TagVO::get_tags_by_page(
+            &RBATIS.acquire().await.expect("rbatis acquire error"),
+            &page,
+        )
+        .await?;
+        Ok(result)
     }
 }

@@ -99,7 +99,8 @@ impl AppServer {
                         .service(admin::moment_controller::create_moment)
                         .service(admin::category_controller::categories)
                         .service(admin::category_controller::update_category)
-                        .service(admin::category_controller::delete_category),
+                        .service(admin::category_controller::delete_category)
+                        .service(admin::tag_controller::get_all_tags),
                 )
                 .default_service(web::to(index_controller::default))
         })

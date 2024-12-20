@@ -11,10 +11,10 @@ use std::collections::HashMap;
 #[routes]
 //#[options("/site")]
 #[get("/blogs")]
-pub async fn blogs(params: Query<SearchRequest>) -> impl Responder {
+pub async fn blogs(mut params: Query<SearchRequest>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
     if params.get_page_num() <= 0 {
-        return Result::error("参数有误!".to_string()).error_json();
+        params.set_page_num(Some(1));
     };
     let page = BlogService::get_blog_list_by_is_published(params.get_page_num() as u64).await;
     let result: Result<HashMap<String, Value>> =
@@ -30,11 +30,11 @@ pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
             log::warn!("/blog 参数有误! id={} error={}", id, e);
             0
         }),
-        None => return Result::error("参数有误!".to_string()).error_json(),
+        None => return Result::ok_no_data("参数有误!".to_string()).error_json(),
     };
     //如果id<=0，则返回参数有误的错误信息
     if id <= 0 {
-        return Result::error("参数有误!".to_string()).error_json();
+        return Result::ok_no_data("参数有误!".to_string()).error_json();
     }
     let blog = BlogService::get_by_id(id).await;
     match blog {
@@ -42,7 +42,7 @@ pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
             return Result::ok("请求成功".to_string(), Some(to_value!(blog))).ok_json();
         }
         Err(e) => {
-            return Result::error(e.to_string()).error_json();
+            return Result::ok_no_data(e.to_string()).error_json();
         }
     }
 }
@@ -59,7 +59,7 @@ pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder 
         None => 1,
     };
     if category_name.is_empty() {
-        return Result::error("参数有误!".to_string()).error_json();
+        return Result::ok_no_data("参数有误!".to_string()).error_json();
     }
     let page = BlogService::get_by_name(category_name, page).await;
     let result: Result<HashMap<String, Value>> =
@@ -79,7 +79,7 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
         None => 1,
     };
     if tag_name.is_empty() {
-        return Result::error("参数有误!".to_string()).error_json();
+        return Result::ok_no_data("参数有误!".to_string()).error_json();
     }
     let page = BlogService::get_by_tag_name(tag_name, page).await;
     let result: Result<HashMap<String, Value>> =
@@ -107,7 +107,7 @@ pub async fn check_blog_password(data: Json<SearchRequest>) -> impl Responder {
             }
         }
     }
-    Result::error("参数有误!".to_string()).error_json()
+    Result::ok_no_data("参数有误!".to_string()).error_json()
 }
 
 #[routes]
@@ -118,7 +118,7 @@ pub async fn search_blog(query: Query<HashMap<String, String>>) -> impl Responde
         None => String::new(),
     };
     if blog_title.is_empty() {
-        return Result::error("参数有误!".to_string()).error_json();
+        return Result::ok_no_data("参数有误!".to_string()).error_json();
     }
     //查找title内容的文章
     let result = to_value!(BlogService::search_blog(blog_title).await);

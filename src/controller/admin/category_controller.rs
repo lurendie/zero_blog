@@ -52,7 +52,7 @@ pub async fn update_category(
 ) -> impl Responder {
     //参数校验
     if form.get_name().is_empty() {
-        return Result::error("参数有误!".to_string()).error_json();
+        return Result::ok_no_data("参数有误!".to_string()).error_json();
     }
     match form.get_id() == 0 {
         //新增分类
@@ -88,12 +88,12 @@ pub async fn delete_category(
     };
     // 查询分类下是否有文章
     match BlogService::check_category_exist_blog(id).await {
-        true => return Result::error("分类下存在文章,不能删除!".to_string()).error_json(),
+        true => return Result::ok_no_data("分类下存在文章,不能删除!".to_string()).error_json(),
         false => {
             // 删除分类
             match CategoryService::delete_category(id).await {
                 Ok(_) => Result::ok_no_data("删除分类成功!".to_string()).ok_json(),
-                Err(e) => Result::error(e.to_string()).error_json(),
+                Err(e) => Result::ok_no_data(e.to_string()).error_json(),
             }
         }
     }
