@@ -27,7 +27,7 @@
 
 # TODO 
  - 日志系统 [ 完成 ]
- - Rbatis or Mysql [ 完成 ]
+ - Sea-orm or Mysql [ 完成 ]
  - 前台页面
    - 首页 [ 完成 ]
    - 关于 [ 完成 ]
