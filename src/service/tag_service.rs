@@ -1,19 +1,19 @@
-use rbatis::{Page, PageRequest};
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, DatabaseConnection, EntityTrait, ModelTrait, PaginatorTrait,
+};
 
 use crate::constant::redis_key_constants;
-use crate::dao::{BlogDao, BlogTagDao};
-
-use crate::dao::TagDao;
+use crate::entity::{blog, tag};
+use crate::enums::DataBaseError;
 use crate::models::dto::tag_dto::TagVO;
 use crate::models::vo::serise::Series;
-use crate::rbatis::RBATIS;
 
 use super::RedisService;
 pub struct TagService;
 impl TagService {
-    pub async fn get_tags() -> Vec<Value> {
+    pub async fn get_tags(db: &DatabaseConnection) -> Vec<Value> {
         let mut result = vec![];
         //1.查询redis缓存
         let redis_cache =
@@ -32,11 +32,14 @@ impl TagService {
             return arr;
         }
         //2.查询数据库
-        TagDao::get_list()
+        tag::Entity::find()
+            .all(db)
             .await
             .unwrap_or_default()
-            .iter()
-            .for_each(|item| result.push(to_value!(item)));
+            .into_iter()
+            .for_each(|model| {
+                result.push(to_value!(TagVO::from(model)));
+            });
 
         //保存到Redis
         RedisService::set_value_vec(
@@ -47,77 +50,48 @@ impl TagService {
         result
     }
 
-    pub(crate) async fn get_tags_count() -> rbs::value::map::ValueMap {
+    pub(crate) async fn get_tags_count(db: &DatabaseConnection) -> rbs::value::map::ValueMap {
         let mut map = ValueMap::new();
         let mut legend = vec![];
         let mut series = vec![];
 
-        for item in TagDao::get_list().await.unwrap() {
-            legend.push(to_value!(item.name.clone()));
-            let series_item = Series::new(
-                item.id.unwrap(),
-                item.name.clone(),
-                BlogDao::get_tags_count(item.name).await,
-            );
-            series.push(series_item);
+        match tag::Entity::find().all(db).await {
+            Ok(items) => {
+                for item in items {
+                    legend.push(to_value!(&item.tag_name));
+
+                    let count = match item.find_related(blog::Entity).count(db).await {
+                        Ok(count) => count,
+                        Err(e) => {
+                            log::error!("查询标签文章数失败:{}", e);
+                            0
+                        }
+                    };
+                    let series_item = Series::new(item.id, item.tag_name, count);
+                    series.push(series_item);
+                }
+            }
+            Err(e) => {
+                log::error!("查询标签失败:{}", e);
+            }
         }
         map.insert(to_value!("legend"), to_value!(legend));
         map.insert(to_value!("series"), to_value!(series));
         map
     }
 
-    pub(crate) async fn get_tags_by_blog_id(blog_id: u16) -> Vec<u16> {
-        let mut list = Vec::new();
-        for item in BlogTagDao::get_tags_by_blog_id(blog_id).await.unwrap() {
-            list.push(item.get_tag_id());
-        }
-        list
-    }
-
-    pub(crate) async fn get_tags_by_id(tag_id: u16) -> TagVO {
-        let tags = TagVO::select_by_column(
-            &RBATIS.acquire().await.unwrap(),
-            "id",
-            tag_id.to_string().as_str(),
-        )
-        .await;
-        let tag = match tags {
-            Ok(mut list) => {
-                if !list.is_empty() {
-                    let tag = list.pop().unwrap();
-                    return tag;
-                }
-                TagVO::default()
-            }
-            Err(err) => {
-                log::error!("get_tags_by_blog_id err: {:?}", err);
-                TagVO::default()
-            }
-        };
-        tag
-    }
-
     /**
      * 添加标签
      */
-    pub async fn add_tag(name: String) -> Result<u16, rbatis::Error> {
-        let mut tag = TagVO::default();
-        tag.name = name;
-        let result = TagVO::insert(&RBATIS.acquire().await.unwrap(), &tag).await;
-        //添加标签
-        match result {
-            Ok(id) => match id.last_insert_id {
-                Value::U32(id) => Ok(id as u16),
-                _ => {
-                    log::error!("获取新插入的id失败");
-                    Ok(0)
-                }
-            },
-            Err(err) => {
-                log::error!("add_tag err: {:?}", err);
-                Err(err)
-            }
+    pub async fn add_tag(name: String, db: &DatabaseConnection) -> Result<(), DataBaseError> {
+        tag::ActiveModel {
+            tag_name: ActiveValue::set(name),
+            color: ActiveValue::set(Some("#000000".to_string())),
+            ..Default::default()
         }
+        .insert(db)
+        .await?;
+        Ok(())
     }
 
     /**
@@ -126,13 +100,20 @@ impl TagService {
     pub async fn get_tags_by_page(
         page_num: u64,
         page_size: u64,
-    ) -> Result<Page<TagVO>, rbatis::Error> {
-        let page = PageRequest::new(page_num, page_size).set_do_count(true);
-        let result = TagVO::get_tags_by_page(
-            &RBATIS.acquire().await.expect("rbatis acquire error"),
-            &page,
-        )
-        .await?;
-        Ok(result)
+        db: &DatabaseConnection,
+    ) -> Result<ValueMap, DataBaseError> {
+        let page = tag::Entity::find().paginate(db, page_size);
+        let models = page.fetch_page(page_num).await?;
+        let mut list: Vec<TagVO> = vec![];
+        for model in models {
+            list.push(model.into());
+        }
+        let mut map: ValueMap = ValueMap::new();
+        map.insert(to_value!("pageNum"), to_value!(page_num));
+        map.insert(to_value!("pageSize"), to_value!(page_size));
+        map.insert(to_value!("pages"), to_value!(page.num_pages().await?));
+        map.insert(to_value!("total"), to_value!(page.num_pages().await?));
+        map.insert(to_value!("list"), to_value!(list));
+        Ok(map)
     }
 }

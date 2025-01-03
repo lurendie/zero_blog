@@ -66,12 +66,12 @@ impl Result<Value> {
             .json(&self)
     }
 
-    pub fn error_json(&self) -> HttpResponse {
-        HttpResponse::Ok()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .content_type(mime::TEXT_HTML_UTF_8)
-            .json(&self)
-    }
+    // pub fn error_json(&self) -> HttpResponse {
+    //     HttpResponse::Ok()
+    //         .status(StatusCode::INTERNAL_SERVER_ERROR)
+    //         .content_type(mime::TEXT_HTML_UTF_8)
+    //         .json(&self)
+    // }
 
     pub fn bad_request_json(&self) -> HttpResponse {
         HttpResponse::Ok()

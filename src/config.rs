@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, sync::LazyLock};
 //配置文件结构体
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub server: ServerConfig,
     pub mysql: MysqlConfig, //Mysql链接
@@ -16,7 +16,7 @@ pub struct Config {
 /**
  * Redis 连接信息结构体
  */
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ReidsConfig {
     pub port: u16,    //端口
     pub host: String, //IP地址
@@ -28,7 +28,7 @@ pub struct ReidsConfig {
 /**
  * MySQL 配置信息结构体
  */
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct MysqlConfig {
     pub port: u16,    //端口
     pub host: String, //IP地址
@@ -39,7 +39,7 @@ pub struct MysqlConfig {
 /**
  * Server 配置信息结构体
  */
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ServerConfig {
     pub port: u16,             //端口
     pub host: String,          //IP地址
@@ -50,3 +50,10 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
     let yaml_str = fs::read_to_string("./config/config.yaml").expect("Failed to read config.yaml");
     serde_yaml::from_str::<Config>(&yaml_str).expect("Failed to parse config.yaml")
 });
+
+/**
+ * 获取配置信息
+ */
+pub fn _get_app_config() -> Config {
+    CONFIG.clone()
+}

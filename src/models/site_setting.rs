@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use rbatis::crud;
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct SiteSetting{
     //#[crud_table(column: "id")]
@@ -12,4 +11,4 @@ pub struct SiteSetting{
     pub value :String,
     pub r#type :u16 //1基础设置，2页脚徽标，3资料卡，4友链信息
 }
-crud!(SiteSetting {});
+

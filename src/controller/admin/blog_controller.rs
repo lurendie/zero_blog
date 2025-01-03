@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::app_state::AppState;
 use crate::models::vo::blog_vo::BlogVO;
 use crate::service::{BlogService, CategoryService, TagService};
 use crate::{
@@ -18,11 +19,16 @@ use rbs::{to_value, Value};
 
 #[routes] // 定义路由
 #[get("/blogs")] // 定义GET请求的路由
-pub async fn blogs(query: Query<SearchRequest>, _: Authenticated<AppClaims>) -> impl Responder {
+pub async fn blogs(
+    query: Query<SearchRequest>,
+    _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     // 定义异步函数，返回一个实现了Responder trait的类型
+    let connect = app.get_mysql_pool();
     let mut map = ValueMap::new(); // 创建一个ValueMap类型的变量
-    let page = BlogService::get_blog_all_page(query.0).await; // 调用BlogService的get_blog_all_page方法，传入query.0，获取博客分页数据
-    let categories = CategoryService::get_categories().await; // 调用CategoryService的get_categories方法，获取分类数据
+    let page = BlogService::find_all_page(query.0, connect).await; // 调用BlogService的get_blog_all_page方法，传入query.0，获取博客分页数据
+    let categories = CategoryService::find_categories(connect).await; // 调用CategoryService的get_categories方法，获取分类数据
     map.insert(to_value!("blogs"), to_value!(page)); // 将博客分页数据插入到map中
     map.insert(to_value!("categories"), to_value!(categories)); // 将分类数据插入到map中
     Result::ok("请求成功".to_string(), Some(to_value!(map))).ok_json() // 返回一个包含map的JSON响应
@@ -34,24 +40,29 @@ pub async fn blogs(query: Query<SearchRequest>, _: Authenticated<AppClaims>) -> 
 #[routes]
 #[put("/blog/{blog_id}/visibility")]
 pub async fn visibility(
-    path: web::Path<u16>,
+    path: web::Path<i64>,
     mut query: Json<BlogVisibility>,
     _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
 ) -> impl Responder {
     let id = path.into_inner();
-    query.set_id(id as u32);
-    match BlogService::update_visibility(&query).await {
-        true => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        false => Result::error("更新失败".to_string()).error_json(),
+    query.set_id(id as i64);
+    match BlogService::update_visibility(&query, app.get_mysql_pool()).await {
+        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
     }
 }
 
 #[routes]
 #[put("/blog/top")]
-pub async fn top(query: Query<BlogVisibility>, _: Authenticated<AppClaims>) -> impl Responder {
-    match BlogService::update_visibility(&query).await {
-        true => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        false => Result::error("更新失败".to_string()).error_json(),
+pub async fn top(
+    query: Query<BlogVisibility>,
+    _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
+) -> impl Responder {
+    match BlogService::update_visibility(&query, app.get_mysql_pool()).await {
+        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
     }
 }
 
@@ -60,10 +71,11 @@ pub async fn top(query: Query<BlogVisibility>, _: Authenticated<AppClaims>) -> i
 pub async fn recommend(
     query: Query<BlogVisibility>,
     _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
 ) -> impl Responder {
-    match BlogService::update_visibility(&query).await {
-        true => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        false => Result::error("更新失败".to_string()).error_json(),
+    match BlogService::update_visibility(&query, app.get_mysql_pool()).await {
+        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
     }
 }
 /**
@@ -71,10 +83,11 @@ pub async fn recommend(
  */
 #[routes]
 #[get("/categoryAndTag")]
-pub async fn category_and_tag() -> impl Responder {
+pub async fn category_and_tag(app: web::Data<AppState>) -> impl Responder {
     let mut map: HashMap<String, Value> = HashMap::new();
-    let tag_list = TagService::get_tags().await;
-    let category_list = CategoryService::get_list().await;
+    let connect = app.get_mysql_pool();
+    let tag_list = TagService::get_tags(connect).await;
+    let category_list = CategoryService::get_list(connect).await;
     map.insert("categories".to_string(), to_value!(category_list));
     map.insert("tags".to_string(), to_value!(tag_list));
     Result::ok("请求成功!".to_string(), Some(to_value!(map))).ok_json()
@@ -85,17 +98,23 @@ pub async fn category_and_tag() -> impl Responder {
  */
 #[routes]
 #[get("/blog")]
-pub async fn blog(query: Query<HashMap<String, String>>) -> impl Responder {
+pub async fn blog(
+    query: Query<HashMap<String, String>>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     let id = query
         .get("id")
         .unwrap_or(&"0".to_string())
         .parse::<u16>()
         .unwrap_or_default();
     if id <= 0 {
-        return Result::error("参数错误".to_string()).error_json();
+        return Result::error("参数错误".to_string()).ok_json();
     }
-    let blog = BlogService::get_blog_dto(id).await;
-    Result::ok("请求成功!".to_string(), Some(to_value!(blog))).ok_json()
+    let blog = BlogService::find_by_id(id, app.get_mysql_pool()).await;
+    match blog {
+        Ok(blog) => Result::ok("请求成功!".to_string(), Some(to_value!(blog))).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
+    }
 }
 
 /**
@@ -103,10 +122,14 @@ pub async fn blog(query: Query<HashMap<String, String>>) -> impl Responder {
  */
 #[routes]
 #[put("/blog")]
-pub async fn update_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> impl Responder {
-    match BlogService::update_blog_dto(query.into_inner()).await {
-        true => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        false => Result::error("更新失败".to_string()).error_json(),
+pub async fn update_blog(
+    query: Json<BlogVO>,
+    _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
+) -> impl Responder {
+    match BlogService::update_blog(query.into_inner(), app.get_mysql_pool()).await {
+        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
     }
 }
 /**
@@ -114,10 +137,14 @@ pub async fn update_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> im
  */
 #[routes]
 #[post("/blog")]
-pub async fn create_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> impl Responder {
-    match BlogService::update_blog_dto(query.into_inner()).await {
-        true => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        false => Result::error("更新失败".to_string()).error_json(),
+pub async fn create_blog(
+    query: Json<BlogVO>,
+    _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
+) -> impl Responder {
+    match BlogService::update_blog(query.into_inner(), app.get_mysql_pool()).await {
+        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
     }
 }
 
@@ -129,17 +156,18 @@ pub async fn create_blog(query: Json<BlogVO>, _: Authenticated<AppClaims>) -> im
 pub async fn delete_blog(
     query: Query<HashMap<String, String>>,
     _: Authenticated<AppClaims>,
+    app: web::Data<AppState>,
 ) -> impl Responder {
     // 解析参数 id
     let id = match query.get("id") {
-        Some(id) => id.parse::<u16>().unwrap_or_default(),
+        Some(id) => id.parse::<i64>().unwrap_or_default(),
         None => 0,
     };
     if id <= 0 {
-        return Result::error("参数错误".to_string()).error_json();
+        return Result::error("参数错误".to_string()).ok_json();
     }
-    match BlogService::delete_blog(id).await {
-        true => Result::ok_no_data("删除成功".to_string()).ok_json(),
-        false => Result::error("删除失败".to_string()).error_json(),
+    match BlogService::delete_by_id(id, app.get_mysql_pool()).await {
+        Ok(_) => Result::ok_no_data("删除成功".to_string()).ok_json(),
+        Err(e) => Result::error(e.to_string()).ok_json(),
     }
 }

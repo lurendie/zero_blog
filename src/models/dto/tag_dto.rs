@@ -1,8 +1,9 @@
-use rbatis::{crud, impl_select_page};
+
 use serde::{Deserialize, Serialize};
+use crate::entity::tag;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagVO {
-    pub id: Option<u16>,
+    pub id: Option<i64>,
     #[serde(rename(deserialize = "tag_name"))]
     pub name: String,
     pub color: String,
@@ -17,5 +18,13 @@ impl Default for TagVO {
         }
     }
 }
-crud!(TagVO {}, "tag");
-impl_select_page!(TagVO{get_tags_by_page()=>""}, "tag");
+
+impl From<tag::Model> for TagVO {
+    fn from(t: tag::Model) -> Self {
+        Self {
+            id: Some(t.id),
+            name: t.tag_name,
+            color: t.color.unwrap_or("#000000".to_string()),
+        }
+    }
+}

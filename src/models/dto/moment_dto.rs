@@ -1,6 +1,4 @@
-use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
-use crate::service::CommonService;
 #[derive(Debug, Clone, Serialize, Deserialize,Default)]
 pub struct MomentDTO {
     id: Option<u16>,
@@ -8,7 +6,6 @@ pub struct MomentDTO {
     #[serde(rename(deserialize = "createTime"))]
     pub(crate) create_time: Option<String>,
     pub(crate) likes: Option<u64>,
-    #[serde(rename(deserialize = "published"),  deserialize_with = "CommonService::bool_from_int")]
     pub(crate) is_published: bool,
 }
 
@@ -68,5 +65,3 @@ impl MomentDTO {
         self.is_published = is_published;
     }
 }
-crud!(MomentDTO {}, "moment");
-impl_select_page!(MomentDTO{select_page() => "`where is_published = 1`"});

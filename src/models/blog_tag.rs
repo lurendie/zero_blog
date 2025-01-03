@@ -1,4 +1,4 @@
-use rbatis::crud;
+
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BlogTag {
@@ -28,4 +28,3 @@ impl BlogTag {
         self
     }
 }
-crud!(BlogTag {});

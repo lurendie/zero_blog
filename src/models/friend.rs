@@ -1,15 +1,14 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use rbatis::crud;
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 //友链
-pub(crate) struct Friend{
-     id :Option<u16>,
-     nickname:String,
-     description:String,
-     website:String,
-     avatar:String,
-     is_published:u8,
-     views:u16,
-     create_time:String
+pub(crate) struct Friend {
+    pub(crate) id: Option<i64>,
+    pub(crate) nickname: String,
+    pub(crate) description: String,
+    pub(crate) website: String,
+    pub(crate) avatar: String,
+    pub(crate) is_published: bool,
+    pub(crate) views: i32,
+    pub(crate) create_time: NaiveDateTime,
 }
-crud!(Friend{});

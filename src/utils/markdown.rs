@@ -7,12 +7,12 @@ use comrak::{
 use std::io::{self, Write};
 pub struct MarkdownParser;
 impl MarkdownParser {
-    pub fn parser_html(markdown: &str) -> String {
+    pub fn parser_html(markdown: String) -> String {
         let adapter = CustomHeadingAdapter::new();
         let options = Options::default();
         let mut plugins = Plugins::default();
         plugins.render.heading_adapter = Some(&adapter);
-        markdown_to_html_with_plugins(markdown, &options, &plugins)
+        markdown_to_html_with_plugins(markdown.as_str(), &options, &plugins)
     }
 }
 

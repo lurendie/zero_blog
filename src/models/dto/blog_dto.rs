@@ -1,96 +1,82 @@
-use rbatis::rbdc::datetime::DateTime;
-use rbatis::{crud, impl_select, impl_select_page, impl_update};
-use serde::{Deserialize, Deserializer, Serialize};
-use crate::service::CommonService;
-use crate::dao::CategoryDao;
+use chrono::NaiveDateTime;
+use sea_orm::{DatabaseConnection, ModelTrait};
+use serde::{Deserialize, Serialize};
 
-use crate::models::category::Category;
+use crate::{
+    entity::{category, tag},
+    models::category::Category,
+};
 
 use super::tag_dto::TagVO;
+use crate::entity::blog;
 
 //Blog
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BlogDto {
-    id: Option<u16>,
+    id: Option<i64>,
     title: String,
     #[serde(rename(serialize = "firstPicture"))]
     first_picture: String,
     content: String,
     description: String,
-    #[serde(
-        deserialize_with = "CommonService::bool_from_int",
-        rename(deserialize = "is_published")
-    )]
+    #[serde(rename(deserialize = "is_published"))]
     published: bool,
-    #[serde(
-        deserialize_with =  "CommonService::bool_from_int",
-        rename(deserialize = "is_recommend")
-    )]
+    #[serde(rename(deserialize = "is_recommend"))]
     recommend: bool,
-    #[serde(
-        deserialize_with =  "CommonService::bool_from_int",
-        rename(deserialize = "is_appreciation")
-    )]
+    #[serde(rename(deserialize = "is_appreciation"))]
     appreciation: bool,
-    #[serde(
-        deserialize_with =  "CommonService::bool_from_int",
-        rename(deserialize = "is_comment_enabled", serialize = "commentEnabled")
-    )]
+    #[serde(rename(deserialize = "is_comment_enabled", serialize = "commentEnabled"))]
     comment_enabled: bool,
     #[serde(rename(serialize = "createTime"))]
-    create_time: DateTime,
+    create_time: NaiveDateTime,
     #[serde(rename(serialize = "updateTime"))]
-    update_time: DateTime,
-    views: u16,
-    words: u16,
+    update_time: NaiveDateTime,
+    views: i32,
+    words: i32,
     #[serde(rename(serialize = "readTime"))]
-    read_time: u16,
-    //category_id: u16,
-    #[serde(deserialize_with = "CommonService::bool_from_int", rename(deserialize = "is_top"))]
+    read_time: i32,
+
+    #[serde(rename(deserialize = "is_top"))]
     top: bool,
     password: Option<String>,
-    user_id: Option<u16>,
+    user_id: Option<i64>,
     #[serde(rename(deserialize = "category_id"), skip_serializing)]
     //跳过该字段，不进行序列化操作。
-    category_id: u16,
+    category_id: i64,
     //#[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
     category: Option<Category>,
     tags: Option<Vec<TagVO>>,
 }
 
-crud!(BlogDto {});
-impl_update!(BlogDto{update_by_id(id:&str) => "`where id = #{id}`"},"blog");
-impl_select_page!(BlogDto{select_page() => "`where is_published = 1`"});
-impl_select_page!(BlogDto{select_page_by_name(name:&str) =>"
-     if name != null && name != '':
-       `where name != #{name}`
-     if name == '':
-       `where name != ''`"});
-
-//BUG 方法无法正确排序返回结果
-impl_select_page!(BlogDto{select_page_blog_all(title:&str) =>"where 1=1 
- if !title.is_empty():
-   `and title like concat('%', #{title}, '%')` 
- ORDER BY create_time DESC
-"},"blog");
-
-impl_select!(BlogDto{get_blog(id:&str)=>"`where blog.id = #{id}`"},"blog");
-
-// // id 类型转 category
-fn _category_from_id<'de, D>(deserializer: D) -> Result<Option<Category>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    if let Ok(id) = u16::deserialize(deserializer) {
-        let fut = CategoryDao::get_by_id(id as u16);
-        let _v = Box::pin(async { Some(fut.await.unwrap()) });
-        return Ok(None);
+impl From<blog::Model> for BlogDto {
+    fn from(model: blog::Model) -> Self {
+        BlogDto {
+            id: Some(model.id),
+            title: model.title,
+            first_picture: model.first_picture,
+            content: model.content,
+            description: model.description,
+            published: model.is_published,
+            recommend: model.is_recommend,
+            appreciation: model.is_appreciation,
+            comment_enabled: model.is_comment_enabled,
+            create_time: model.create_time,
+            update_time: model.update_time,
+            views: model.views,
+            words: model.words,
+            read_time: model.read_time,
+            top: model.is_top,
+            password: model.password,
+            user_id: model.user_id,
+            category: None,
+            category_id: model.category_id,
+            tags: None,
+        }
     }
-    Ok(Some(Category::default()))
 }
 
 impl BlogDto {
-    pub fn get_id(&self) -> u16 {
+    pub fn get_id(&self) -> i64 {
         self.id.unwrap_or(0)
     }
     pub fn get_title(&self) -> &str {
@@ -119,13 +105,13 @@ impl BlogDto {
         self.comment_enabled
     }
 
-    pub fn get_views(&self) -> u16 {
+    pub fn get_views(&self) -> i32 {
         self.views
     }
-    pub fn get_words(&self) -> u16 {
+    pub fn get_words(&self) -> i32 {
         self.words
     }
-    pub fn get_read_time(&self) -> u16 {
+    pub fn get_read_time(&self) -> i32 {
         self.read_time
     }
     pub fn get_is_top(&self) -> bool {
@@ -134,17 +120,17 @@ impl BlogDto {
     pub fn get_password(&self) -> Option<&str> {
         self.password.as_deref()
     }
-    pub fn get_user_id(&self) -> u16 {
+    pub fn get_user_id(&self) -> i64 {
         self.user_id.unwrap_or(0)
     }
-    pub fn get_category_id(&self) -> u16 {
+    pub fn get_category_id(&self) -> i64 {
         self.category_id
     }
     pub fn get_category(&self) -> Option<Category> {
         self.category.clone()
     }
 
-    pub fn set_id(&mut self, id: u16) -> &mut Self {
+    pub fn set_id(&mut self, id: i64) -> &mut Self {
         self.id = Some(id);
         self
     }
@@ -180,23 +166,23 @@ impl BlogDto {
         self.comment_enabled = is_comment_enabled;
         self
     }
-    pub fn set_create_time(&mut self, create_time: DateTime) -> &mut Self {
+    pub fn set_create_time(&mut self, create_time: NaiveDateTime) -> &mut Self {
         self.create_time = create_time;
         self
     }
-    pub fn set_update_time(&mut self, update_time: DateTime) -> &mut Self {
+    pub fn set_update_time(&mut self, update_time: NaiveDateTime) -> &mut Self {
         self.update_time = update_time;
         self
     }
-    pub fn set_views(&mut self, views: u16) -> &mut Self {
+    pub fn set_views(&mut self, views: i32) -> &mut Self {
         self.views = views;
         self
     }
-    pub fn set_words(&mut self, words: u16) -> &mut Self {
+    pub fn set_words(&mut self, words: i32) -> &mut Self {
         self.words = words;
         self
     }
-    pub fn set_read_time(&mut self, read_time: u16) -> &mut Self {
+    pub fn set_read_time(&mut self, read_time: i32) -> &mut Self {
         self.read_time = read_time;
         self
     }
@@ -208,11 +194,11 @@ impl BlogDto {
         self.password = password.map(|s| s.to_string());
         self
     }
-    pub fn set_user_id(&mut self, user_id: u16) -> &mut Self {
+    pub fn set_user_id(&mut self, user_id: i64) -> &mut Self {
         self.user_id = Some(user_id);
         self
     }
-    pub fn set_category_id(&mut self, category_id: u16) -> &mut Self {
+    pub fn set_category_id(&mut self, category_id: i64) -> &mut Self {
         self.category_id = category_id;
         self
     }
@@ -226,5 +212,28 @@ impl BlogDto {
     }
     pub fn get_tags(&self) -> Vec<TagVO> {
         self.tags.clone().unwrap()
+    }
+
+    pub async fn related_handle(&mut self, model: blog::Model, db: &DatabaseConnection) {
+        let category_model = match model.find_related(category::Entity).one(db).await {
+            Ok(category_model) => category_model.unwrap_or_default(),
+            Err(e) => {
+                log::error!("{:?}", e);
+                category::Model::default()
+            }
+        };
+
+        self.category = Some(Category::from(category_model));
+
+        let tag_models = model
+            .find_related(tag::Entity)
+            .all(db)
+            .await
+            .unwrap_or_default();
+        let mut tags = vec![];
+        for tag_model in tag_models {
+            tags.push(TagVO::from(tag_model))
+        }
+        self.tags = Some(tags);
     }
 }

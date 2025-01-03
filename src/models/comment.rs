@@ -1,6 +1,4 @@
-use rbatis::{crud, impl_select_page};
 use serde::{Deserialize, Serialize};
-use crate::service::CommonService;
 //评论
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Comment {
@@ -11,12 +9,11 @@ pub struct Comment {
     pub(crate) avatar: String,
     pub(crate) create_time: String,
     pub(crate) ip: String,
-    #[serde(deserialize_with = "CommonService::bool_from_int")]
+  
     pub(crate) is_published: bool,
-    #[serde(deserialize_with = "CommonService::bool_from_int")]
+  
     pub(crate) is_admin_comment: bool,
     pub(crate) page: u16,
-    #[serde(deserialize_with = "CommonService::bool_from_int")]
     pub(crate) is_notice: bool,
     pub(crate) blog_id: Option<u16>,
     pub(crate) parent_comment_id: Option<u16>,
@@ -24,6 +21,4 @@ pub struct Comment {
     pub(crate) qq: Option<String>,
     pub(crate) comments: Option<Vec<Comment>>,
 }
-crud!(Comment {});
-//分页查询
-impl_select_page!(Comment{select_page(page:&str,blog_id:&str) => ""});
+

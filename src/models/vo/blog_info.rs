@@ -1,22 +1,25 @@
+use chrono::NaiveDateTime;
+use sea_orm::{DatabaseConnection, ModelTrait};
+use serde::{Deserialize, Serialize};
+
+use crate::entity::{category, tag};
 use crate::models::{category::Category, dto::tag_dto::TagVO};
-// use rbatis::rbdc::datetime::DateTime;
-use rbatis::{crud, impl_select_page};
-use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
+
+use crate::entity::blog::{self, Model as Blog};
 //博客简要信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BlogInfo {
-    pub id: Option<u16>,
+    pub id: Option<i64>,
     pub title: String,
     pub description: String,
     #[serde(rename(serialize = "createTime"))]
-    pub create_time: String,
-    pub views: u16,
-    pub words: u16,
+    pub create_time: NaiveDateTime,
+    pub views: i32,
+    pub words: i32,
     #[serde(rename(serialize = "readTime"))]
-    pub read_time: u16,
+    pub read_time: i32,
     pub password: Option<String>,
     pub privacy: Option<bool>,
-    #[serde(deserialize_with = "bool_from_int")]
     pub is_top: bool,
     pub tags: Option<Vec<TagVO>>,
     pub category: Option<Category>,
@@ -30,24 +33,47 @@ pub struct BlogInfo {
 //     }
 // }
 
-fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    match u64::deserialize(deserializer)? {
-        0 => Ok(false),
-        1 => Ok(true),
-        other => Err(serde::de::Error::invalid_value(
-            Unexpected::Unsigned(other),
-            &"0 or 1",
-        )),
+impl From<Blog> for BlogInfo {
+    fn from(model: Blog) -> Self {
+        BlogInfo {
+            id: Some(model.id),
+            title: model.title,
+            description: model.description,
+            create_time: model.create_time,
+            views: model.views,
+            words: model.words,
+            read_time: model.read_time,
+            password: model.password,
+            privacy: None,
+            is_top: model.is_top,
+            tags: None,
+            category: None,
+            first_picture: Some(model.first_picture),
+        }
     }
 }
 
-crud!(BlogInfo {}, "blog");
-impl_select_page!(BlogInfo{select_page()=>"
-      if !sql.contains('count(1)'):
-      `order by is_top desc, create_time desc`"},"blog");
-impl_select_page!(BlogInfo{select_page_by_categoryid(id:&str) =>"
-     if id != null && id != '':
-       `where category_id = #{id}`"},"blog");
+impl BlogInfo {
+    pub async fn related_handle(&mut self, model: blog::Model, db: &DatabaseConnection) {
+        let category_model = match model.find_related(category::Entity).one(db).await {
+            Ok(category_model) => category_model.unwrap_or_default(),
+            Err(e) => {
+                log::error!("{:?}", e);
+                category::Model::default()
+            }
+        };
+
+        self.category = Some(Category::from(category_model));
+
+        let tag_models = model
+            .find_related(tag::Entity)
+            .all(db)
+            .await
+            .unwrap_or_default();
+        let mut tags = vec![];
+        for tag_model in tag_models {
+            tags.push(TagVO::from(tag_model))
+        }
+        self.tags = Some(tags);
+    }
+}

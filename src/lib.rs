@@ -1,17 +1,13 @@
 //配置项
 pub mod config;
-//Rbatis
-pub mod rbatis;
-//模型
+//models
 pub mod models;
 // 应用
-pub mod app;
+pub mod app_server;
 //常量
 mod constant;
-//控制
+//路由控制
 pub mod controller;
-//数据访问
-mod dao;
 //枚举
 mod enums;
 //日志
@@ -23,6 +19,9 @@ mod utils;
 //redis
 mod redis;
 //中间件
+mod app_state;
 mod middleware;
+
+mod entity;
 
 pub use config::CONFIG;

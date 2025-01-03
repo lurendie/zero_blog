@@ -1,7 +1,8 @@
+use crate::app_state::AppState;
 use crate::models::vo::page_request::SearchRequest;
 use crate::models::vo::result::Result;
 use crate::service;
-use actix_web::web::{Json, Query};
+use actix_web::web::{self, Json, Query};
 use actix_web::{routes, HttpResponse, Responder};
 use rbs::{to_value, Value};
 use service::BlogService;
@@ -11,44 +12,50 @@ use std::collections::HashMap;
 #[routes]
 //#[options("/site")]
 #[get("/blogs")]
-pub async fn blogs(mut params: Query<SearchRequest>) -> impl Responder {
+pub async fn blogs(mut params: Query<SearchRequest>, app: web::Data<AppState>) -> impl Responder {
     //提供默认值page_num.expect("异常！")
     if params.get_page_num() <= 0 {
         params.set_page_num(Some(1));
     };
-    let page = BlogService::get_blog_list_by_is_published(params.get_page_num() as u64).await;
+    let db_conn = app.get_mysql_pool();
+
+    let page = BlogService::find_list_by_page(params.get_page_num() as u64, db_conn).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok().json(result)
 }
 #[routes]
 #[get("/blog")]
-pub async fn blog(params: Query<HashMap<String, String>>) -> impl Responder {
+pub async fn blog(
+    params: Query<HashMap<String, String>>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     //获取blog_id参数   不是必要参数，如果没有，则返回参数有误的错误信息
-    let id: u16 = match params.get("id") {
-        Some(id) => id.parse().unwrap_or_else(|e| {
-            log::warn!("/blog 参数有误! id={} error={}", id, e);
-            0
-        }),
-        None => return Result::ok_no_data("参数有误!".to_string()).error_json(),
+    let id: i64 = match params.get("id") {
+        Some(id) => id.parse().unwrap_or_default(),
+        None => return Result::error("参数有误!".to_string()).ok_json(),
     };
     //如果id<=0，则返回参数有误的错误信息
     if id <= 0 {
-        return Result::ok_no_data("参数有误!".to_string()).error_json();
+        return Result::error("参数有误!".to_string()).ok_json();
     }
-    let blog = BlogService::get_by_id(id).await;
+    let blog = BlogService::find_id_detail(id, app.get_mysql_pool()).await;
     match blog {
-        Ok(blog) => {
+        Some(blog) => {
             return Result::ok("请求成功".to_string(), Some(to_value!(blog))).ok_json();
         }
-        Err(e) => {
-            return Result::ok_no_data(e.to_string()).error_json();
+        None => {
+            return Result::error("没有找到该文章!".to_string()).ok_json();
         }
     }
 }
+
 #[routes]
 #[get("/category")]
-pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder {
+pub async fn category(
+    params: Query<HashMap<String, String>>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     let category_name: String = match params.get("categoryName") {
         Some(category_name) => category_name.clone(),
         None => String::new(),
@@ -59,16 +66,20 @@ pub async fn category(params: Query<HashMap<String, String>>) -> impl Responder 
         None => 1,
     };
     if category_name.is_empty() {
-        return Result::ok_no_data("参数有误!".to_string()).error_json();
+        return Result::error("参数有误!".to_string()).ok_json();
     }
-    let page = BlogService::get_by_name(category_name, page).await;
+    let page = BlogService::find_by_categorya_name(category_name, page, app.get_mysql_pool()).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok().json(result)
 }
+
 #[routes]
 #[get("/tag")]
-pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
+pub async fn tag(
+    params: Query<HashMap<String, String>>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     let tag_name: String = match params.get("tagName") {
         Some(category_name) => category_name.clone(),
         None => String::new(),
@@ -79,9 +90,9 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
         None => 1,
     };
     if tag_name.is_empty() {
-        return Result::ok_no_data("参数有误!".to_string()).error_json();
+        return Result::error("参数有误!".to_string()).ok_json();
     }
-    let page = BlogService::get_by_tag_name(tag_name, page).await;
+    let page = BlogService::find_by_tag_name(tag_name, page, app.get_mysql_pool()).await;
     let result: Result<HashMap<String, Value>> =
         Result::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok().json(result)
@@ -92,35 +103,35 @@ pub async fn tag(params: Query<HashMap<String, String>>) -> impl Responder {
  */
 #[routes]
 #[post("/checkBlogPassword")]
-pub async fn check_blog_password(data: Json<SearchRequest>) -> impl Responder {
+pub async fn check_blog_password(
+    data: Json<SearchRequest>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     if data.get_blog_id() > 0 {
-        let blog_info = BlogService::get_by_id(data.get_blog_id()).await;
-        if let Ok(blog_info) = &blog_info {
-            if let Some(password) = &blog_info.password {
-                if *password == data.get_password() {
-                    return Result::ok(
-                        "验证成功,密码正确!".to_string(),
-                        Some(to_value!(blog_info)),
-                    )
+        let blog_info = BlogService::find_id_detail(data.get_blog_id(), app.get_mysql_pool()).await;
+        if let Some(blog_info) = blog_info {
+            if blog_info.password.clone().unwrap_or_default() == data.get_password() {
+                return Result::ok("验证成功,密码正确!".to_string(), Some(to_value!(blog_info)))
                     .ok_json();
-                }
             }
         }
     }
-    Result::ok_no_data("参数有误!".to_string()).error_json()
+    Result::error("参数有误!".to_string()).ok_json()
 }
 
 #[routes]
 #[get("/searchBlog")]
-pub async fn search_blog(query: Query<HashMap<String, String>>) -> impl Responder {
+pub async fn search_blog(query: Query<HashMap<String, String>>,app: web::Data<AppState>) -> impl Responder {
     let blog_title = match query.get("query") {
         Some(title) => title.clone(),
         None => String::new(),
     };
     if blog_title.is_empty() {
-        return Result::ok_no_data("参数有误!".to_string()).error_json();
+        return Result::error("参数有误!".to_string()).ok_json()
     }
     //查找title内容的文章
-    let result = to_value!(BlogService::search_blog(blog_title).await);
-    Result::ok("请求成功".to_string(), Some(result)).ok_json()
+    match BlogService::search_content(blog_title,app.get_mysql_pool()).await {
+        Ok(result) => Result::ok("请求成功".to_string(), Some(to_value!(result))).ok_json(),
+        Err(e) =>Result::error(e.to_string()).ok_json(),
+    }
 }

@@ -1,9 +1,8 @@
-use rbatis::crud;
 use serde::{Deserialize, Serialize};
 //Blog可见性
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct BlogVisibility {
-    id: Option<u32>,
+    id: Option<i64>,
     #[serde(rename(serialize = "is_appreciation", deserialize = "appreciation"))]
     appreciation: Option<bool>, // 赞赏可见性，默认为false。如果设置为false，则赞赏不可见。
     #[serde(rename(serialize = "is_comment_enabled", deserialize = "commentEnabled"))]
@@ -17,17 +16,16 @@ pub struct BlogVisibility {
     top: Option<bool>, // 置顶可见性，默认为false。如果设置为false，则置顶不可见。
 }
 
-crud!(BlogVisibility {}, "blog");
-//impl_update!(BlogVisibility{update_by_id() => "`where id = '2'`"},"blog");
+
 
 impl BlogVisibility {
     pub fn new() -> Self {
         Self::default()
     }
-    pub fn get_id(&self) -> Option<u32> {
+    pub fn get_id(&self) -> Option<i64> {
         self.id
     }
-    pub fn set_id(&mut self, id: u32) -> &mut Self {
+    pub fn set_id(&mut self, id: i64) -> &mut Self {
         self.id = Some(id);
         self
     }

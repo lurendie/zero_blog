@@ -6,6 +6,7 @@
  *
  */
 
+use crate::app_state::AppState;
 use crate::config::CONFIG;
 use crate::models::Result;
 use crate::{middleware::AppClaims, service::UserService};
@@ -36,10 +37,11 @@ pub async fn login(
     jwt_ttl: Data<JwtTtl>,
     refresh_ttl: Data<RefreshTtl>,
     session: MaybeAuthenticated<AppClaims>,
+    app:Data<AppState>,
 ) -> impl Responder {
     //验证账号 密码是否正确
-    let mut user = UserService::get_by_username(&user_form.username).await;
-    if let Some(user) = user.as_mut() {
+    let mut user = UserService::get_by_username(&user_form.username,app.get_mysql_pool()).await;
+    if let Ok(user) = user.as_mut() {
         //验证账号密码是否正确,排除非Admin账号登录
         if user_form.password != user.get_password() || user.get_role() != "ROLE_admin" {
             return HttpResponse::Unauthorized()
@@ -68,7 +70,7 @@ pub async fn login(
             expiration_time: jwt_ttl.0.as_seconds_f64() as u64,
             //audience: Audience::Web,
             jwt_id: Uuid::parse_str(uuid.to_string().as_str()).unwrap(),
-            account_id: user.get_id(),
+            account_id: user.get_id() as i32,
             not_before: 0,
         };
         let pair = store
@@ -92,5 +94,5 @@ pub async fn login(
             .json(result);
     }
     log::error!("用户不存在!");
-    HttpResponse::Unauthorized().json(Result::<Value>::error("权限认证失败!".to_string()))
+    HttpResponse::Ok().json(Result::<Value>::error("权限认证失败!".to_string()))
 }
