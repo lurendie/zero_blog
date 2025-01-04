@@ -1,5 +1,8 @@
-use crate::dao::UserDao;
-use crate::models::user::User;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+
+use crate::entity::user;
+use crate::enums::DataBaseError;
+use crate::model::user::User;
 
 pub struct UserService;
 
@@ -7,16 +10,17 @@ impl UserService {
     /**
      *根据Name获取User
      */
-    pub async fn get_by_username(username: &String) -> Option<User> {
-        let mut user_list = UserDao::get_by_username(&username).await;
-        if let Ok(user_list) = user_list.as_mut() {
-            if !user_list.is_empty() {
-                let user = user_list.pop();
-                return user;
-            } else {
-                return None;
-            }
+    pub async fn get_by_username(
+        username: &String,
+        db: &DatabaseConnection,
+    ) -> Result<User, DataBaseError> {
+        let user = user::Entity::find()
+            .filter(user::Column::Username.eq(username))
+            .one(db)
+            .await?;
+        if let Some(user) = user {
+            return Ok(User::from(user));
         }
-        None
+        Err(DataBaseError::Custom("没有检索到该用户".to_string()))
     }
 }

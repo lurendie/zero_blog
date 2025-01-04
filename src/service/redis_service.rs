@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::enums::DataBaseError;
 use crate::redis;
-use crate::CONFIG;
+use crate::config::CONFIG;
 use deadpool_redis::redis::AsyncCommands;
 use rbs::Value;
 
@@ -15,24 +15,21 @@ impl RedisService {
     pub async fn get_hash_key(
         key: String,
         hash: String,
-    ) -> Result<HashMap<String, Value>, Box<dyn std::error::Error>> {
+    ) -> Result<HashMap<String, Value>, DataBaseError> {
         //1.获取连接
         let mut connection = redis::get_connection().await?;
         //2.判断key是否存在
-        if !connection
-            .exists::<String, bool>(key.clone())
-            .await
-            .unwrap_or(false)
-        {
-            log::info!("redis KEY: {} 没有检索到数据 ", key);
-            return Err(Box::new(DataBaseError::Unknown));
+        if !connection.exists::<String, bool>(key.clone()).await? {
+            return Err(DataBaseError::Custom(format!("redis {} 不存在", key)));
         }
+
         let redis_reuslt = connection
             .hget::<String, String, String>(key.to_owned(), hash.to_owned())
             .await?;
-        Ok(serde_json::from_str::<HashMap<String, Value>>(
-            redis_reuslt.as_str(),
-        )?)
+
+        //3.redis反序列化
+        let result = serde_json::from_str::<HashMap<String, Value>>(redis_reuslt.as_str())?;
+        Ok(result)
     }
 
     /**
@@ -74,19 +71,13 @@ impl RedisService {
     /**
      * 获取`key`字符串
      */
-    pub async fn get_value_map(
-        key: String,
-    ) -> Result<HashMap<String, Value>, Box<dyn std::error::Error>> {
+    pub async fn get_value_map(key: String) -> Result<HashMap<String, Value>, DataBaseError> {
         //1.获取连接
-        match redis::get_connection().await {
-            Ok(mut connection) => {
-                let result = connection.get::<String, String>(key).await?;
-                Ok(serde_json::from_str::<HashMap<String, Value>>(
-                    result.as_str(),
-                )?)
-            }
-            Err(e) => Err(Box::new(e)),
-        }
+        let mut connection = redis::get_connection().await?;
+        let result = connection.get::<String, String>(key).await?;
+        Ok(serde_json::from_str::<HashMap<String, Value>>(
+            result.as_str(),
+        )?)
     }
 
     /**

@@ -12,7 +12,7 @@
 </p>
 
 # 介绍 Introduce
-  RUST基于actix-web+Vue 博客系统,自用博客，长期维护，欢迎勘误，
+  ZeroBlog基于actix-web+Vue 博客系统,自用博客，长期维护中，现阶段`开发阶段`，项目以学习RUST为主。
 
 # 开发环境 Development Deploy 
   1. `git clone` 项目 
@@ -27,7 +27,7 @@
 
 # TODO 
  - 日志系统 [ 完成 ]
- - Rbatis or Mysql [ 完成 ]
+ - Sea-orm or Mysql [ 完成 ]
  - 前台页面
    - 首页 [ 完成 ]
    - 关于 [ 完成 ]
@@ -46,7 +46,7 @@
    - 友链 [ 进行中 ]
    - 文章 [ 进行中 ]
    - 动态 [ 进行中 ]
-   - JWT  [ 进行中 ]
+   - JWT  [ 完成 ]
   
 # Thanks
  感谢[Nblog](https://github.com/Naccl/NBlog)的前端页面

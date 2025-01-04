@@ -1,32 +1,31 @@
-use crate::models::about::About;
-use crate::rbatis::RBATIS;
-use crate::utils::MarkdownParser;
+use crate::entity::about;
+use crate::enums::DataBaseError;
+use crate::util::MarkdownParser;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
+use sea_orm::{DatabaseConnection, EntityTrait};
 
 pub struct AboutService;
 
 impl AboutService {
     ///获取所有about信息
-    pub(crate) async fn get_about() -> ValueMap {
+    pub(crate) async fn get_about(db: &DatabaseConnection) -> Result<ValueMap, DataBaseError> {
         let mut map = ValueMap::new();
-        About::select_all(&RBATIS.acquire().await.expect("异常"))
-            .await
-            .unwrap_or_else(|e| {
-                //出现异常情况
-                log::error!("get_about error：{}", e);
-                vec![]
-            })
-            .iter()
-            .for_each(|item: &About| {
+        about::Entity::find()
+            .all(db)
+            .await?
+            .into_iter()
+            .for_each(|item| {
                 //转HTML
-                if &item.name_en == "content" {
-                    let content = MarkdownParser::parser_html(&item.value);
-                    map.insert(to_value!(&item.name_en), to_value!(content));
+                let name = item.name_en.unwrap_or_default();
+                let value = item.value.unwrap_or_default();
+                if name.contains("content") {
+                    let content = MarkdownParser::parser_html(value);
+                    map.insert(to_value!(name), to_value!(content));
                 } else {
-                    map.insert(to_value!(&item.name_en), to_value!(&item.value));
+                    map.insert(to_value!(name), to_value!(value));
                 }
             });
-        map
+        Ok(map)
     }
 }

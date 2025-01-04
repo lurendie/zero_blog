@@ -17,7 +17,6 @@ use actix_web::{
     http::header::{HeaderName, HeaderValue},
     Error,
 };
-use rbatis::rbatis_codegen::ops::AsProxy;
 /**
  * 校验访客标识码
  */
@@ -73,7 +72,7 @@ where
             let uuid = Uuid::new_v4();
             let uuid_str = uuid.to_string();
             //如果不包含 admin
-            if !(res.request().uri().path().string().contains("admin")) {
+            if !(res.request().uri().path().to_string().contains("admin")) {
                 //1.检测访客标识码是否存在
                 let req_headers = res.request().headers();
                 let identification = req_headers.get("Identification");

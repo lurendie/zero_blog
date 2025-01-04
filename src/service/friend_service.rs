@@ -1,40 +1,48 @@
-use crate::dao::site_setting_dao;
-use crate::dao::FriendDao;
-use crate::utils::MarkdownParser;
+use crate::entity::site_setting;
+use crate::enums::DataBaseError;
+use crate::model::vo::friend_info::FriendInfo;
+use crate::util::MarkdownParser;
 use rbs::{to_value, value::map::ValueMap};
+use sea_orm::ColumnTrait;
+use sea_orm::DatabaseConnection;
+use sea_orm::EntityTrait;
+use sea_orm::QueryFilter;
+use crate::entity::friend;
 
 pub struct FriendService;
 
 impl FriendService {
     //获取友链数据
-    pub(crate) async fn get_friend() -> ValueMap {
+    pub(crate) async fn get_friend(db: &DatabaseConnection) -> Result<ValueMap, DataBaseError> {
         let mut friend_map = ValueMap::new();
         let mut friend_info = ValueMap::new();
-        let friends = site_setting_dao::get_list()
-            .await
-            .into_iter()
-            .filter(|item| {
-                item.name_en == "friendContent" || item.name_en == "friendCommentEnabled"
-            })
-            .collect::<Vec<_>>();
+        let site_settings = site_setting::Entity::find()
+            .filter(site_setting::Column::NameEn.contains("friend"))
+            .all(db)
+            .await?;
 
-        friends.iter().for_each(|item| {
-            if item.name_en == "friendContent" {
-                friend_info.insert(
-                    to_value!("content"),
-                    to_value!(MarkdownParser::parser_html(&item.value)),
-                );
+        site_settings.into_iter().for_each(|item| {
+            if let Some(name) = item.name_en {
+                if name.contains("friendContent") {
+                    friend_info.insert(
+                        to_value!("content"),
+                        to_value!(MarkdownParser::parser_html(item.value.unwrap_or_default())),
+                    );
+                } else if name.contains("friendCommentEnabled") {
+                    friend_info.insert(
+                        to_value!("commentEnabled"),
+                        to_value!(item.value.unwrap_or_default() == "1"),
+                    );
+                }
             }
-            if item.name_en == "friendCommentEnabled" {
-                friend_info.insert(to_value!("commentEnabled"), to_value!(item.value == "1"));
-            };
         });
-        let friend_list = FriendDao::get_friends().await.unwrap_or_else(|e| {
-            log::error!("{}", e);
-            vec![]
-        });
+        let models =friend::Entity::find().filter(friend::Column::IsPublished.eq(true)).all(db).await?;
+        let mut friend_list =vec![];
+        for model in models {
+            friend_list.push(FriendInfo::from(model));
+        }
         friend_map.insert(to_value!("friendInfo"), to_value!(friend_info));
         friend_map.insert(to_value!("friendList"), to_value!(friend_list));
-        friend_map
+        Ok(friend_map)
     }
 }

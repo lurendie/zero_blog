@@ -1,12 +1,16 @@
-use crate::models::vo::result::Result;
+use crate::app_state::AppState;
+use crate::model::vo::response_result::ResponseResult;
 use crate::service::FriendService;
-use actix_web::get;
-use actix_web::{HttpResponse, Responder};
+use actix_web::Responder;
+use actix_web::{get, web, HttpResponse};
 
 //获取友链信息
 #[get("/friends")]
-pub(crate) async fn get_friend() -> impl Responder {
-    let friend = FriendService::get_friend().await;
-    let result = Result::ok("请求成功".to_string(), Some(friend));
-    HttpResponse::Ok().json(result)
+pub(crate) async fn get_friend(app: web::Data<AppState>) -> impl Responder {
+    match FriendService::get_friend(app.get_mysql_pool()).await {
+        Ok(friend) => {
+            HttpResponse::Ok().json(ResponseResult::ok("请求成功".to_string(), Some(friend)))
+        }
+        Err(e) => ResponseResult::error(e.to_string()).json(),
+    }
 }

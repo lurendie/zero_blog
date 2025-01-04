@@ -1,40 +1,47 @@
-use crate::constant::blog_info_constants::RANDOM_BLOG_LIMIT_NUM;
-use crate::constant::blog_info_constants::{self, NEW_BLOG_PAGE_SIZE};
+use crate::constant::blog_info_constants::{self, NEW_BLOG_PAGE_SIZE, RANDOM_BLOG_LIMIT_NUM};
 use crate::constant::redis_key_constants;
-use crate::dao::BlogDao;
-use crate::dao::{CategoryDao, TagDao};
-use crate::models::dto::blog_dto::BlogDto;
-use crate::models::vo::blog_visibility::BlogVisibility;
-use crate::models::vo::blog_vo::BlogVO;
-use crate::models::vo::page_request::SearchRequest;
-use crate::models::vo::search_blog::SearchBlog;
-use crate::models::vo::{blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo};
-use crate::rbatis::get_conn;
-use crate::rbatis::RBATIS;
+use crate::entity::{
+    blog::{self},
+    blog_tag, category, tag,
+};
+
+use crate::enums::{DataBaseError, TypeValue};
+use crate::model::dto::blog_dto::BlogDto;
+use crate::model::vo::{
+    blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo,
+    blog_visibility::BlogVisibility, blog_vo::BlogVO, page_request::SearchRequest,
+    search_blog::SearchBlog,
+};
 use crate::service::RedisService;
-use crate::utils::MarkdownParser;
+use crate::util::MarkdownParser;
+use chrono::{Datelike, NaiveDate};
 use rand::Rng;
-use rbatis::IPage;
-use rbatis::{rbdc::DateTime, IPageRequest, Page};
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 use rbs::Value;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseConnection, DbBackend, DbErr, EntityTrait,
+    FromQueryResult, ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QueryTrait, Statement,
+    TransactionTrait,
+};
 use std::collections::HashMap;
-
-use super::BlogTagService;
-use super::TagService;
+use std::ops::Index;
+use std::str::FromStr;
 
 pub struct BlogService;
 
 impl BlogService {
-    pub(crate) async fn get_blog_list_by_is_published(page_num: u64) -> HashMap<String, Value> {
+    pub(crate) async fn find_list_by_page(
+        page_num: u64,
+        db: &DatabaseConnection,
+    ) -> HashMap<String, Value> {
         //1.查询redis缓存
         let redis_cache = RedisService::get_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
             page_num.to_string(),
         )
         .await;
-        //2.缓存不未Null则返回返回
+        //2.缓存不未Null则返回缓存数据
         if let Ok(redis_cache) = redis_cache {
             log::info!(
                 "reids KEY:{} 当前页：{} 获取缓存数据成功",
@@ -45,21 +52,32 @@ impl BlogService {
         }
         //3.查询数据库
         let mut map: HashMap<String, Value> = HashMap::new();
-        let page_list: Page<BlogInfo>;
-        page_list = match BlogDao::get_blog_pages(page_num, blog_info_constants::PAGE_SIZE).await {
-            Ok(mut ok) => {
-                BlogService::bloginfo_handle(&mut ok.records).await;
-                ok
-            }
+
+        let page = blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .order_by_desc(blog::Column::CreateTime)
+            .paginate(db, blog_info_constants::PAGE_SIZE);
+        let list = match page.fetch_page(page_num - 1).await {
+            Ok(list) => list,
             Err(e) => {
-                log::error!("BlogList查询失败:{:?}", e);
-                Page::new(0, 0, 0, vec![])
+                log::error!("查询失败:{}", e);
+                vec![]
             }
         };
-        map.insert("list".to_string(), to_value!(&page_list.records));
-        map.insert("totalPage".to_string(), to_value!(page_list.pages()));
+        let mut blog_info_list = Vec::new();
+        for item in list {
+            blog_info_list.push(BlogInfo::from(item));
+        }
+
+        BlogService::bloginfo_handle(&mut blog_info_list, db).await;
+
+        map.insert("list".to_string(), to_value!(&blog_info_list));
+        map.insert(
+            "totalPage".to_string(),
+            to_value!(page.num_pages().await.expect("分页错误")),
+        );
         //4.如果数据库查询不是Null 存放到Redis中
-        if !&page_list.records().is_empty() {
+        if !blog_info_list.is_empty() {
             let _ = RedisService::set_hash_key(
                 redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
                 page_num.to_string(),
@@ -72,7 +90,7 @@ impl BlogService {
     /**
      * 获取随机文章
      */
-    pub async fn get_blog_list_random() -> Vec<Value> {
+    pub async fn find_list_random(db: &DatabaseConnection) -> Vec<Value> {
         //1.查询Redis 缓存数据
         let redis_cache =
             RedisService::get_value_vec(redis_key_constants::RANDOM_BLOG_LIST.to_string()).await;
@@ -90,47 +108,50 @@ impl BlogService {
             return arr;
         }
         //2.查询数据库
-        match BlogDao::get_blog_list().await {
-            Ok(mut list) => {
-                BlogService::bloginfo_handle(&mut list).await;
-                let mut ids = vec![];
-                let mut result = vec![];
-                let mut rng = rand::thread_rng();
 
-                if list.len() < RANDOM_BLOG_LIMIT_NUM {
-                    for i in 0..(list.len() - 1) {
-                        ids.push(i);
-                        result.push(to_value!(list[i].clone()));
-                    }
-                } else {
-                    //随机获取文章ID并且去重
-                    while ids.len() < RANDOM_BLOG_LIMIT_NUM {
-                        let index = rng.gen_range(0..(list.len() - 1));
-                        if !ids.contains(&index) {
-                            ids.push(index);
-                            result.push(to_value!(list[index].clone()));
-                        }
-                    }
-                }
-                //保存到Redis
-                RedisService::set_value_vec(
-                    redis_key_constants::RANDOM_BLOG_LIST.to_string(),
-                    &to_value!(&result),
-                )
-                .await;
-                return result;
+        let blog_models = blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .all(db)
+            .await
+            .unwrap_or_default();
+        let mut blog_info_list = Vec::new();
+        for item in blog_models {
+            blog_info_list.push(BlogInfo::from(item));
+        }
+        BlogService::bloginfo_handle(&mut blog_info_list, db).await;
+
+        let mut ids = vec![];
+        let mut result = vec![];
+        let mut rng = rand::thread_rng();
+
+        if blog_info_list.len() < RANDOM_BLOG_LIMIT_NUM {
+            for i in 0..(blog_info_list.len() - 1) {
+                ids.push(i);
+                result.push(to_value!(blog_info_list[i].clone()));
             }
-            Err(e) => {
-                log::error!("{}", e);
-                vec![]
+        } else {
+            //随机获取文章ID并且去重
+            while ids.len() < RANDOM_BLOG_LIMIT_NUM {
+                let index = rng.gen_range(0..(blog_info_list.len() - 1));
+                if !ids.contains(&index) {
+                    ids.push(index);
+                    result.push(to_value!(blog_info_list[index].clone()));
+                }
             }
         }
+        //保存到Redis
+        RedisService::set_value_vec(
+            redis_key_constants::RANDOM_BLOG_LIST.to_string(),
+            &to_value!(&result),
+        )
+        .await;
+        return result;
     }
 
     /**
      * 获取最新文章
      */
-    pub async fn get_blog_list_new() -> Vec<Value> {
+    pub async fn find_list_new(db: &DatabaseConnection) -> Vec<Value> {
         //1.查询Redis 缓存数据
         let redis_cache =
             RedisService::get_value_vec(redis_key_constants::NEW_BLOG_LIST.to_string()).await;
@@ -148,373 +169,464 @@ impl BlogService {
             return arr;
         }
         //2.查询数据库
-        match BlogDao::get_blog_list().await {
-            Ok(mut list) => {
-                //反转元素
-                list.reverse();
-                BlogService::bloginfo_handle(&mut list).await;
-                let mut result = vec![];
-                //如果文章数量小于NEW_BLOG_PAGE_SIZE 则直接返回
-                if list.len() < NEW_BLOG_PAGE_SIZE {
-                    for i in 0..(list.len() - 1) {
-                        result.push(to_value!(list[i].clone()));
-                    }
-                } else {
-                    for i in 0..NEW_BLOG_PAGE_SIZE {
-                        result.push(to_value!(list[i].clone()));
-                    }
-                }
+        let blog_models = blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .all(db)
+            .await
+            .unwrap_or_default();
+        let mut blog_info_list = Vec::new();
+        for item in blog_models {
+            blog_info_list.push(BlogInfo::from(item));
+        }
+        BlogService::bloginfo_handle(&mut blog_info_list, db).await;
 
-                //保存到Redis
-                RedisService::set_value_vec(
-                    redis_key_constants::NEW_BLOG_LIST.to_string(),
-                    &to_value!(&result),
-                )
-                .await;
-                result
+        //反转元素
+        blog_info_list.reverse();
+        BlogService::bloginfo_handle(&mut blog_info_list, db).await;
+        let mut result = vec![];
+        //如果文章数量小于NEW_BLOG_PAGE_SIZE 则直接返回
+        if blog_info_list.len() < NEW_BLOG_PAGE_SIZE {
+            for i in 0..(blog_info_list.len() - 1) {
+                result.push(to_value!(blog_info_list[i].clone()));
             }
-            Err(e) => {
-                log::error!("{}", e.to_string());
-                vec![]
+        } else {
+            for i in 0..NEW_BLOG_PAGE_SIZE {
+                result.push(to_value!(blog_info_list[i].clone()));
             }
         }
+
+        //保存到Redis
+        RedisService::set_value_vec(
+            redis_key_constants::NEW_BLOG_LIST.to_string(),
+            &to_value!(&result),
+        )
+        .await;
+        result
     }
 
     //根据分类名称查询博文
-    pub async fn get_by_name(name: String, page_num: usize) -> HashMap<String, Value> {
+    pub async fn find_by_categorya_name(
+        name: String,
+        page_num: usize,
+        db: &DatabaseConnection,
+    ) -> HashMap<String, Value> {
         let mut map: HashMap<String, Value> = HashMap::new();
-        let page_list: Page<BlogInfo> =
-            match BlogDao::get_by_category(name, page_num, blog_info_constants::PAGE_SIZE).await {
-                Ok(mut ok) => {
-                    BlogService::bloginfo_handle(&mut ok.records).await;
-                    ok
-                }
-                Err(e) => {
-                    log::error!("BlogList查询失败:{}", e);
-                    Page::new(0, 0, 0, vec![])
-                }
-            };
+        let category_model = match category::Entity::find()
+            .filter(category::Column::CategoryName.eq(&name))
+            .one(db)
+            .await
+        {
+            Ok(category_model) => category_model.unwrap_or_default(),
+            Err(e) => {
+                log::error!("{:?}", e);
+                category::Model::default()
+            }
+        };
 
-        map.insert("list".to_string(), to_value!(&page_list.records));
-        map.insert("totalPage".to_string(), to_value!(page_list.pages()));
+        let page = category_model
+            .find_related(blog::Entity)
+            .filter(blog::Column::IsPublished.eq(true))
+            .order_by_desc(blog::Column::CreateTime)
+            .paginate(db, blog_info_constants::PAGE_SIZE);
+        let blog_models = page
+            .fetch_page(page_num as u64 - 1)
+            .await
+            .unwrap_or_default();
+        let mut blog_info_list = Vec::new();
+        for item in blog_models {
+            blog_info_list.push(BlogInfo::from(item));
+        }
+        BlogService::bloginfo_handle(&mut blog_info_list, db).await;
+        map.insert("list".to_string(), to_value!(blog_info_list));
+        map.insert(
+            "totalPage".to_string(),
+            to_value!(page.num_pages().await.unwrap_or_default()),
+        );
         map
     }
+
     //根据ID查找博文
-    pub(crate) async fn get_by_id(id: u16) -> Result<BlogDetail, rbatis::rbdc::Error> {
-        let mut blog = BlogDao::get_by_id(id).await?;
-        blog.content = MarkdownParser::parser_html(&blog.content);
-        Ok(blog)
+    pub(crate) async fn find_id_detail(id: i64, db: &DatabaseConnection) -> Option<BlogDetail> {
+        let blog_model = match blog::Entity::find_by_id(id).one(db).await {
+            Ok(blog) => blog.unwrap_or_default(),
+            Err(e) => {
+                log::error!("{:?}", e);
+                return None;
+            }
+        };
+        let mut blog = BlogDetail::from(blog_model);
+        blog.content = MarkdownParser::parser_html(blog.content.clone());
+        Some(blog)
     }
 
     //根据tag名称查询博文
-    pub async fn get_by_tag_name(name: String, page_num: usize) -> HashMap<String, Value> {
+    pub async fn find_by_tag_name(
+        name: String,
+        page_num: usize,
+        db: &DatabaseConnection,
+    ) -> HashMap<String, Value> {
         let mut map: HashMap<String, Value> = HashMap::new();
-        let page_list: Page<BlogInfo> =
-            match BlogDao::get_by_tag(name, page_num, blog_info_constants::PAGE_SIZE).await {
-                Ok(mut ok) => {
-                    BlogService::bloginfo_handle(&mut ok.records).await;
-                    ok
-                }
-                Err(e) => {
-                    log::error!("BlogList查询失败:{}", e);
-                    Page::new(0, 0, 0, vec![])
-                }
-            };
-        map.insert("list".to_string(), to_value!(&page_list.records));
-        map.insert("totalPage".to_string(), to_value!(page_list.pages()));
+        let tag_model = match tag::Entity::find()
+            .filter(tag::Column::TagName.eq(&name))
+            .one(db)
+            .await
+        {
+            Ok(Some(tag_model)) => tag_model,
+            Err(e) => {
+                log::error!("{:?}", e);
+                tag::Model::default()
+            }
+            _ => tag::Model::default(),
+        };
+        let page = tag_model
+            .find_related(blog::Entity)
+            .filter(blog::Column::IsPublished.eq(true))
+            .order_by_desc(blog::Column::CreateTime)
+            .paginate(db, blog_info_constants::PAGE_SIZE);
+        let blog_models = page
+            .fetch_page(page_num as u64 - 1)
+            .await
+            .unwrap_or_default();
+
+        let mut blog_info_list = Vec::new();
+        for item in blog_models {
+            blog_info_list.push(BlogInfo::from(item));
+        }
+        BlogService::bloginfo_handle(&mut blog_info_list, db).await;
+        map.insert("list".to_string(), to_value!(blog_info_list));
+        map.insert(
+            "totalPage".to_string(),
+            to_value!(page.num_pages().await.unwrap_or_default()),
+        );
         map
     }
 
     //获取归档文章
-    pub(crate) async fn get_archives() -> ValueMap {
+    pub(crate) async fn find_archives(db: &DatabaseConnection) -> Result<ValueMap, DataBaseError> {
         //获取所有文章的日期
         let mut map: ValueMap = ValueMap::new();
-        let blog_datetimes = BlogDao::get_all_datetime().await.unwrap_or_else(|e| {
-            log::error!("{:?}", e);
-            vec![]
-        });
-        let mut date_times = vec![];
-        let _ = blog_datetimes
-            .iter()
-            .map(|itme| date_times.push(itme.create_time.format("YYYY-MM")))
-            .collect::<Vec<_>>();
-        //通过日期获取文章
-        for item in date_times.iter_mut() {
-            let mut itme_map: Vec<BlogArchive> = vec![];
+        let mut dates = ValueMap::new();
+        //1.获取所有文章的日期
+        blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .order_by_desc(blog::Column::CreateTime)
+            .all(db)
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .for_each(|model| {
+                let date = model.create_time.date();
+                let date_str = format!("{}年{}月", date.year(), date.month());
+                if let rbs::Value::Null = dates.index(date_str.as_str()) {
+                    dates.insert(date_str.into(), date.to_string().into());
+                }
+            });
 
-            let blogs = BlogDao::get_by_date(item.clone())
+        for (key, value) in dates {
+            let date_time = NaiveDate::from_str(value.as_str().unwrap_or_default()).unwrap();
+            let sql = Statement::from_sql_and_values(
+                DbBackend::MySql,
+                r#"SELECT id,title,CONCAT(DAY(create_time),"日") as `day`,password
+            FROM blog
+            WHERE YEAR(create_time) = ?
+              AND MONTH(create_time) = ?;"#,
+                [date_time.year().into(), date_time.month().into()],
+            );
+            let mut blogs = BlogArchive::find_by_statement(sql)
+                .all(db)
                 .await
-                .unwrap_or_else(|e| {
-                    log::error!("{:?}", e);
-                    vec![]
-                });
-            for blog in blogs {
-                let mut blog_archive = BlogArchive::new();
-                blog_archive.id = blog.id.unwrap_or_default().to_string();
-                blog_archive.password = blog.password.unwrap_or_default();
-                blog_archive.privacy = false;
-                blog_archive.day = blog.create_time.as_str()[8..10].to_string() + "日";
-                blog_archive.title = blog.title;
-                itme_map.push(blog_archive);
+                .unwrap_or_default();
+
+            for model in blogs.iter_mut() {
+                if model.password.is_none() {
+                    model.password = Some("".to_string());
+                    model.privacy = Some(false);
+                } else {
+                    model.password = Some("".to_string());
+                    model.privacy = Some(true);
+                }
             }
-            //更改
-            item.insert(4, '年');
-            item.insert(10, '月');
-            map.insert(to_value!(item), to_value!(itme_map));
+            map.insert(to_value!(key), to_value!(blogs));
         }
-        map
+        Ok(map)
     }
 
-    pub(crate) async fn get_archives_count() -> Option<usize> {
-        Some(BlogDao::get_archives_count().await.unwrap() as usize)
+    pub(crate) async fn find_archives_count(db: &DatabaseConnection) -> Option<u64> {
+        Some(
+            blog::Entity::find()
+                .filter(blog::Column::IsPublished.eq(true))
+                .count(db)
+                .await
+                .unwrap_or_default(),
+        )
     }
 
     /**
      * 处理BlogInfo结构体依赖关系
      */
-    async fn bloginfo_handle(list: &mut Vec<BlogInfo>) {
+    async fn bloginfo_handle(list: &mut Vec<BlogInfo>, db: &DatabaseConnection) {
         for item in list.iter_mut() {
-            let id = item.id.unwrap();
-            item.category = Some(
-                CategoryDao::get_by_bloginfo_id(id)
-                    .await
-                    .unwrap_or_default(),
-            );
+            let id = item.id.unwrap_or_default();
+            if let Ok(ok) = blog::Entity::find_by_id(id).one(db).await {
+                match ok {
+                    Some(blog) => {
+                        item.related_handle(blog, db).await;
+                    }
+                    None => {
+                        log::error!("没有检索到ID：{} 的文章，无法处理依赖关系", id);
+                    }
+                }
+            }
             if let Some(password) = &item.password {
                 //如果password!=null
                 if *password != "" {
                     item.privacy = Some(true);
+                } else {
+                    item.privacy = Some(false)
                 }
             } else {
                 item.privacy = Some(false)
             }
-            item.password = Some(String::from(""));
+            item.password = None;
             //转HTML
-            item.description = MarkdownParser::parser_html(&item.description);
-            let tags = TagDao::get_blog_tags(id).await;
-            item.tags = Some(tags);
-            item.create_time = item.create_time.as_str()[0..19].to_string();
+            item.description = MarkdownParser::parser_html(item.description.clone());
+            item.create_time = item.create_time;
         }
     }
 
-    /**
-     * 所有文章总数(包含隐藏) -后台
-     */
-    pub async fn get_blog_count() -> i32 {
-        BlogDao::get_blog_count().await.unwrap_or_default()
-    }
+    // /**
+    //  * 所有文章总数(包含隐藏) -后台
+    //  */
+    // pub async fn find_blog_count(db: &DatabaseConnection) -> u64 {
+    //     blog::Entity::find().count(db).await.unwrap_or_default()
+    // }
 
     /**
      * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。 -后台
      */
-    pub async fn get_blog_all_page(mut page: SearchRequest) -> ValueMap {
-        if page.get_title() == "" {
-            let _ = &page.set_title(None);
+    pub async fn find_all_page(mut search: SearchRequest, db: &DatabaseConnection) -> ValueMap {
+        if search.get_title().unwrap_or_default() == "" {
+            let _ = &search.set_title(None);
         }
+
+        let page = blog::Entity::find()
+            .apply_if(search.get_title(), |query, value| {
+                query.filter(blog::Column::Title.like(value))
+            })
+            .apply_if(search.get_category_id(), |query, value| {
+                query.filter(blog::Column::CategoryId.eq(value))
+            })
+            .paginate(db, search.get_page_size() as u64);
+
         let mut map: ValueMap = ValueMap::new();
-        let mut page_list = BlogDao::select_page_blog_dto(&page)
+        let page_list = page
+            .fetch_page(search.get_page_num() as u64 - 1)
             .await
-            .unwrap_or_else(|opt| {
-                log::error!("{:?}", opt);
-                Page::new(0, 0, 0, vec![])
-            });
-        for item in page_list.records.iter_mut() {
-            if item.get_password().is_none() {
-                item.set_password(Some(""));
+            .unwrap_or_default();
+        let mut blog_list = vec![];
+        for model in page_list.into_iter() {
+            let mut blog_dto = BlogDto::from(model.clone());
+            if blog_dto.get_password().is_none() {
+                blog_dto.set_password(Some(""));
             }
-            item.set_category(Some(
-                CategoryDao::get_by_id(item.get_category_id())
-                    .await
-                    .unwrap_or_default(),
-            ));
+            blog_dto.related_handle(model, db).await;
+            blog_list.push(blog_dto);
         }
-        map.insert(to_value!("pageNum"), to_value!(page_list.page_no()));
-        map.insert(to_value!("pageSize"), to_value!(page_list.page_size()));
-        map.insert(to_value!("pages"), to_value!(page_list.pages()));
-        map.insert(to_value!("total"), to_value!(page_list.total()));
-        map.insert(to_value!("list"), to_value!(page_list.records));
+
+        map.insert(
+            to_value!("pageNum"),
+            to_value!(page.num_pages().await.unwrap_or_default()),
+        );
+        map.insert(to_value!("pageSize"), to_value!(search.get_page_size()));
+        map.insert(
+            to_value!("pages"),
+            to_value!(page.num_pages().await.unwrap_or_default()),
+        );
+        map.insert(
+            to_value!("total"),
+            to_value!(page.num_items().await.unwrap_or_default()),
+        );
+        map.insert(to_value!("list"), to_value!(blog_list));
         map
     }
 
     //根据ID查找博文 - 后台
-    pub async fn update_visibility(v: &BlogVisibility) -> bool {
-        let ok = BlogVisibility::update_by_column(&RBATIS.acquire().await.unwrap(), v, "id")
-            .await
-            .is_ok();
-        ok
+    pub async fn update_visibility(
+        v: &BlogVisibility,
+        db: &DatabaseConnection,
+    ) -> Result<(), DataBaseError> {
+        let blog_model = blog::Entity::find_by_id(v.get_id().unwrap_or_default())
+            .one(db)
+            .await?;
+        match blog_model {
+            Some(mut blog) => {
+                if v.get_appreciation().is_some() {
+                    blog.is_appreciation = v.get_appreciation().unwrap_or_default();
+                }
+                if v.get_published().is_some() {
+                    blog.is_published = v.get_published().unwrap_or_default();
+                }
+                if v.get_top().is_some() {
+                    blog.is_top = v.get_top().unwrap_or_default();
+                }
+                if v.get_password().is_some() {
+                    blog.password = v.get_password();
+                }
+                if v.get_recommend().is_some() {
+                    blog.is_recommend = v.get_recommend().unwrap_or_default();
+                }
+                if v.get_comment_enabled().is_some() {
+                    blog.is_comment_enabled = v.get_comment_enabled().unwrap_or_default();
+                }
+                blog::ActiveModel::from(blog).update(db).await?;
+                return Ok(());
+            }
+            None => {
+                return Err(DataBaseError::Custom("没有检索到文章".to_string()));
+            }
+        }
     }
     /**
      * 获取id的文章 -后台
      */
-    pub(crate) async fn get_blog_dto(id: u16) -> Option<BlogDto> {
-        let list =
-            BlogDto::get_blog(&RBATIS.acquire().await.unwrap(), id.to_string().as_str()).await;
-
-        match list {
-            Ok(mut blogs) => {
-                if !blogs.is_empty() {
-                    let mut blog = blogs.pop().expect("异常");
-                    //分类
-                    blog.set_category(Some(
-                        CategoryDao::get_by_id(blog.get_category_id())
-                            .await
-                            .unwrap(),
-                    ));
-                    //todo 标签
-                    let mut tags = vec![];
-                    let tags_id = TagService::get_tags_by_blog_id(blog.get_id()).await;
-                    for id in tags_id {
-                        let tag = TagService::get_tags_by_id(id).await;
-                        tags.push(tag)
-                    }
-                    blog.set_tags(Some(tags));
-                    return Some(blog);
+    pub(crate) async fn find_by_id(id: u16, db: &DatabaseConnection) -> Result<BlogDto, DbErr> {
+        match blog::Entity::find_by_id(id).one(db).await {
+            Ok(Some(blog)) => {
+                let mut blog_dto = BlogDto::from(blog.clone());
+                if blog_dto.get_password().unwrap_or_default() == "" {
+                    blog_dto.set_password(None);
                 }
-                None
+                blog_dto.related_handle(blog, db).await;
+                Ok(blog_dto)
             }
-
-            Err(e) => {
-                log::error!("{:?}", e);
-                None
-            }
+            Ok(None) => Err(DbErr::Custom("没有检索到文章".to_string())),
+            Err(e) => Err(e),
         }
     }
+
     /**
      * 添加或者更新文章
      */
-    pub(crate) async fn update_blog_dto(mut query: BlogVO) -> bool {
-        // 开启事务
-        let mut tx = match RBATIS.acquire_begin().await {
-            Ok(tx) => tx,
-            Err(e) => {
-                log::error!("开启事务失败: {:?}", e);
-                return false;
-            }
-        };
+    pub(crate) async fn update_blog(
+        blog_vo: BlogVO,
+        db: &DatabaseConnection,
+    ) -> Result<(), DataBaseError> {
+        let ok = db
+            .transaction(|conn| {
+                Box::pin(async move {
+                    let tag_list = blog_vo.get_tag_list().unwrap_or_default();
+                    let mut new_tag_ids = vec![];
+                    for tag_type in tag_list {
+                        match tag_type {
+                            TypeValue::Int32(tag_id) => {
+                                new_tag_ids.push(tag_id as i64);
+                            }
+                            TypeValue::String(tag_name) => {
+                                let insert_result = tag::Entity::find()
+                                    .filter(tag::Column::TagName.contains(&tag_name))
+                                    .one(conn)
+                                    .await;
+                                //如果tag存在，则直接获取id
+                                if let Ok(Some(tag_model)) = insert_result {
+                                    new_tag_ids.push(tag_model.id);
+                                } else {
+                                    //如果tag不存在，则插入tag，并获取id
+                                    let tag_model = tag::ActiveModel {
+                                        tag_name: ActiveValue::set(tag_name.to_string()),
+                                        color: ActiveValue::set(Some("#000000".to_string())),
+                                        ..Default::default()
+                                    };
+                                    let result = tag::Entity::insert(tag_model).exec(conn).await?;
+                                    new_tag_ids.push(result.last_insert_id);
+                                }
+                            }
+                        }
+                    }
+                    let blog_model = blog::Model::from(blog_vo.clone()).into();
+                    match blog_vo.get_id() == 0 {
+                        true => {
+                            let model = blog::ActiveModel::insert(blog_model, conn).await?;
+                            if !new_tag_ids.is_empty() {
+                                let mut insert_tag_models = vec![];
+                                for tag_id in new_tag_ids {
+                                    let active = blog_tag::ActiveModel {
+                                        tag_id: ActiveValue::set(tag_id),
+                                        blog_id: ActiveValue::set(model.id),
+                                        ..Default::default()
+                                    };
+                                    insert_tag_models.push(active);
+                                }
+                                blog_tag::Entity::insert_many(insert_tag_models)
+                                    .exec(conn)
+                                    .await?;
+                            }
+                            Ok(())
+                        }
+                        false => {
+                            let model = blog::ActiveModel::update(blog_model, conn).await?;
 
-        // 新增或更新文章
-        if query.get_id() == 0 {
-            query.set_create_time(DateTime::now());
-            query.set_update_time(DateTime::now());
-            let data = match BlogVO::insert(&tx, &query).await {
-                Ok(data) => data,
-                Err(e) => {
-                    log::error!("插入文章失败: {:?}", e);
-                    tx.rollback()
-                        .await
-                        .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                    return false;
-                }
-            };
-            // 获取新插入的id
-            let new_id = match data.last_insert_id {
-                Value::U32(id) => id as u16,
-                _ => {
-                    log::error!("获取新插入的id失败");
-                    tx.rollback()
-                        .await
-                        .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                    return false;
-                }
-            };
+                            //1.查询旧的标签
+                            let blog_tag_models = blog_tag::Entity::find()
+                                .filter(blog_tag::Column::BlogId.eq(model.id))
+                                .all(conn)
+                                .await?;
+                            //旧标签数据如果是空，则直接插入新标签
+                            if !blog_tag_models.is_empty() {
+                                let mut tag_ids = vec![];
+                                for model in blog_tag_models {
+                                    tag_ids.push(model.tag_id);
+                                }
 
-            // 更新添加标签
-            let mut add_tags: Vec<u16> = vec![];
-            for value in query.get_tag_list().unwrap_or_default() {
-                match value {
-                    Value::U64(id) => {
-                        add_tags.push(id as u16);
+                                let (insert_tag_ids, delete_tag_ids) =
+                                    Self::array_diff(new_tag_ids, tag_ids);
+                                if !insert_tag_ids.is_empty() {
+                                    let mut insert_tag_models = vec![];
+                                    for tag_id in insert_tag_ids {
+                                        let active = blog_tag::ActiveModel {
+                                            tag_id: ActiveValue::set(tag_id),
+                                            blog_id: ActiveValue::set(model.id),
+                                            ..Default::default()
+                                        };
+                                        insert_tag_models.push(active);
+                                    }
+                                    blog_tag::Entity::insert_many(insert_tag_models)
+                                        .exec(conn)
+                                        .await?;
+                                }
+                                if !delete_tag_ids.is_empty() {
+                                    blog_tag::Entity::delete_many()
+                                        .filter(blog_tag::Column::TagId.is_in(delete_tag_ids))
+                                        .exec(conn)
+                                        .await?;
+                                }
+                            } else {
+                                //直接插入新标签
+                                if !new_tag_ids.is_empty() {
+                                    let mut insert_tag_models = vec![];
+                                    for tag_id in new_tag_ids {
+                                        let active = blog_tag::ActiveModel {
+                                            tag_id: ActiveValue::set(tag_id),
+                                            blog_id: ActiveValue::set(model.id),
+                                            ..Default::default()
+                                        };
+                                        insert_tag_models.push(active);
+                                    }
+                                    blog_tag::Entity::insert_many(insert_tag_models)
+                                        .exec(conn)
+                                        .await?;
+                                }
+                            }
+                            Ok(())
+                        }
                     }
-                    Value::U32(id) => {
-                        add_tags.push(id as u16);
-                    }
-                    Value::I32(id) => {
-                        add_tags.push(id as u16);
-                    }
-                    Value::String(name) => {
-                        let id = TagService::add_tag(name).await.unwrap_or_default();
-                        add_tags.push(id);
-                    }
-                    _ => {
-                        log::error!("标签id类型错误");
-                        tx.rollback()
-                            .await
-                            .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                        return false;
-                    }
-                }
-            }
-
-            if !BlogTagService::inser_tags(add_tags, new_id, &mut tx).await {
-                tx.rollback()
-                    .await
-                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                return false;
-            }
-        } else {
-            query.set_update_time(DateTime::now());
-            if !BlogVO::update_by_column(&tx, &query, "id").await.is_ok() {
-                log::error!("更新文章失败");
-                tx.rollback()
-                    .await
-                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                return false;
-            }
-
-            // 标签处理
-            let mut add_tags = vec![];
-            for value in query.get_tag_list().unwrap_or_default() {
-                match value {
-                    Value::U64(id) => {
-                        add_tags.push(id as u16);
-                    }
-                    Value::U32(id) => {
-                        add_tags.push(id as u16);
-                    }
-                    Value::I32(id) => {
-                        add_tags.push(id as u16);
-                    }
-                    Value::String(name) => {
-                        let id = TagService::add_tag(name).await.unwrap_or_default();
-                        add_tags.push(id);
-                    }
-                    _ => {
-                        log::error!("标签id类型错误");
-                        tx.rollback()
-                            .await
-                            .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                        return false;
-                    }
-                }
-            }
-
-            let remove_tags = TagService::get_tags_by_blog_id(query.get_id()).await;
-            let (add, remove) = BlogService::array_diff(add_tags, remove_tags);
-
-            // 新增标签或者删除标签失败则进行事务回滚
-            if !BlogTagService::inser_tags(add, query.get_id(), &mut tx).await
-                || !BlogTagService::remove_tags(remove, query.get_id(), &mut tx).await
-            {
-                tx.rollback()
-                    .await
-                    .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-                return false;
-            }
-        }
-
-        // 提交事务
-        if let Err(e) = tx.commit().await {
-            log::error!("提交事务失败: {:?}", e);
-            tx.rollback()
-                .await
-                .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-            return false;
-        }
-        true
+                })
+            })
+            .await?;
+        Ok(ok)
     }
 
     //比对数组差异并返回
-    pub fn array_diff(arr1: Vec<u16>, arr2: Vec<u16>) -> (Vec<u16>, Vec<u16>) {
+    fn array_diff(arr1: Vec<i64>, arr2: Vec<i64>) -> (Vec<i64>, Vec<i64>) {
         let mut add_result = Vec::new();
         let mut delete_result = Vec::new();
         //新数据 剔除重复，存在即新增
@@ -533,39 +645,30 @@ impl BlogService {
     }
 
     //删除Blog
-    pub async fn delete_blog(id: u16) -> bool {
-        let mut tx = match RBATIS.acquire_begin().await {
-            Ok(tx) => tx,
-            Err(e) => {
-                log::error!("开启事务失败: {:?}", e);
-                return false;
-            }
-        };
-        //删除文章或者标签失败则进行事务回滚
-        if !BlogVO::delete_by_column(&tx, "id", id).await.is_ok()
-            || !BlogTagService::delete_tags_by_blog_id(id, &mut tx).await
-        {
-            log::error!("删除文章失败");
-            tx.rollback()
-                .await
-                .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-            return false;
-        }
+    pub async fn delete_by_id(id: i64, db: &DatabaseConnection) -> Result<(), DataBaseError> {
+        let result = db
+            .transaction(|conn| {
+                Box::pin(async move {
+                    blog::Entity::delete_by_id(id).exec(conn).await?;
+                    blog_tag::Entity::delete_many()
+                        .filter(blog_tag::Column::BlogId.eq(id))
+                        .exec(conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .await?;
 
-        if let Err(e) = tx.commit().await {
-            log::error!("提交事务失败: {:?}", e);
-            tx.rollback()
-                .await
-                .unwrap_or_else(|e| log::error!("回滚事务失败: {:?}", e));
-            return false;
-        }
-        true
+        Ok(result)
     }
 
     /**
      * 搜索博文
      */
-    pub async fn search_blog(mut content: String) -> Vec<SearchBlog> {
+    pub async fn search_content(
+        mut content: String,
+        db: &DatabaseConnection,
+    ) -> Result<Vec<SearchBlog>, DataBaseError> {
         let mut find_str = content.clone();
         find_str.insert_str(0, r"[\u4E00-\u9FA5A-Za-z0-9_,，。\n\s*\r\t]{0,10}");
         find_str.insert_str(
@@ -574,58 +677,74 @@ impl BlogService {
         );
         content.insert_str(0, "%");
         content.insert_str(content.len(), "%");
-        //构建正则表达式,出现异常则panic
+        //构建正则表达式,出现异常则返回异常
         let regex_builder = regex::RegexBuilder::new(&find_str)
             .case_insensitive(true)
-            .build()
-            .unwrap_or_else(|e| {
-                log::error!("search_blog regex 构建失败:{:?}", e);
-                panic!("search_blog regex 构建失败:{:?}", e)
-            });
-        match SearchBlog::select_by_title(&get_conn().await, &content).await {
-            Ok(mut ok) => {
-                for item in ok.iter_mut() {
-                    let item_content = item.get_content().clone();
-                    match regex_builder.find(&item_content) {
-                        Some(find) => item.set_content(
-                            item_content
-                                .get(find.start()..find.end())
-                                .unwrap_or_default()
-                                .to_string(),
-                        ),
-                        None => {
-                            log::info!("search_blog 未找到关键词:{:?}", find_str);
-                        }
-                    }
+            .build()?;
+        let mut models = blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .filter(blog::Column::Content.contains(content))
+            .all(db)
+            .await?;
+        let mut search_blogs = vec![];
+        for item in models.iter_mut() {
+            let mut search_blog = SearchBlog::from(item.clone());
+            match regex_builder.find(&item.content) {
+                Some(find) => {
+                    search_blog.set_content(
+                        item.content
+                            .get(find.start()..find.end())
+                            .unwrap_or_default()
+                            .to_string(),
+                    );
+                    search_blogs.push(search_blog);
                 }
-                ok
+                None => {
+                    log::info!("search_blog 未找到关键词:{:?}", find_str);
+                }
             }
-            Err(e) => {
-                log::error!("search_blog error : {:?}", e);
-                vec![]
+        }
+        Ok(search_blogs)
+    }
+
+    pub async fn check_category_exist_blog(
+        category_id: i64,
+        db: &DatabaseConnection,
+    ) -> Result<bool, DataBaseError> {
+        match category::Entity::find()
+            .filter(category::Column::Id.eq(category_id))
+            .one(db)
+            .await?
+        {
+            Some(model) => {
+                let count = model
+                    .find_related(blog::Entity)
+                    .count(db)
+                    .await
+                    .unwrap_or_default();
+                Ok(count > 0)
+            }
+            None => {
+                log::error!("分类下 {} 没有检索到文章", category_id);
+                Ok(false)
             }
         }
     }
-
-    pub async fn check_category_exist_blog(category_id: u16) -> bool {
-        let count = BlogDao::get_count_by_category_id(category_id).await.unwrap_or_default();
-        count > 0
-    }   
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{constant::blog_info_constants::RANDOM_BLOG_LIMIT_NUM, service::BlogService};
+    use chrono::{Local, NaiveDate};
     use rand::Rng;
-    use rbatis::rbdc::DateTime;
+    use sea_orm::{DbBackend, EntityTrait, FromQueryResult, Statement};
     // use regex::Regex;
 
-    #[test]
-    pub(crate) fn test_datetime() {
-        let time = DateTime::now().format("YYYY-MM-DD hh:mm:ss");
-        println!("{:?}", time)
-        //stdout "2024-05-18 12:46:22"
-    }
+    // #[test]
+    // pub(crate) fn test_datetime() {
+    //     let time = DateTime::now().format("YYYY-MM-DD hh:mm:ss");
+    //     println!("{:?}", time)
+    //     //stdout "2024-05-18 12:46:22"
 
     //毕竟两个数组的相同数并剔除重复
     #[test]
@@ -723,5 +842,56 @@ mod tests {
         println!("{:?}", item_content.get(range.start..range.end));
         // println!("{:?}", item_content.substring(range.start, range.end));
         //  println!("{:?}", new_content);
+    }
+    #[test]
+    fn test_data() {
+        let date = Local::now().naive_local();
+        println!("{:?}", date.format("%Y-%m").to_string());
+    }
+    use super::*;
+    use crate::app_state::get_connection;
+    use crate::entity::blog;
+    use chrono::Datelike;
+    use rbs::value::map::ValueMap;
+    use std::ops::Index;
+    use std::str::FromStr;
+    #[actix_web::test]
+    async fn test_find_date_time() {
+        let db = get_connection().await;
+        //第一步查询所有的时间
+        let mut dates = ValueMap::new();
+        blog::Entity::find()
+            .order_by_desc(blog::Column::CreateTime)
+            .all(&db)
+            .await
+            .unwrap()
+            .into_iter()
+            .for_each(|model| {
+                let date = model.create_time.date();
+                let date_str = format!("{}年{}月", date.year(), date.month());
+                if let rbs::Value::Null = dates.index(date_str.as_str()) {
+                    dates.insert(date_str.into(), date.to_string().into());
+                }
+            });
+
+        for (key, value) in dates {
+            println!("{} : {}", key, value);
+            let date_time = NaiveDate::from_str(value.as_str().unwrap_or_default()).unwrap();
+            let sql = Statement::from_sql_and_values(
+                DbBackend::MySql,
+                r#"SELECT id,title,DAY(create_time) as `day`,password
+        FROM blog
+        WHERE YEAR(create_time) = ?
+          AND MONTH(create_time) = ?;"#,
+                [date_time.year().into(), date_time.month().into()],
+            );
+            let blogs = BlogArchive::find_by_statement(sql)
+                .all(&db)
+                .await
+                .unwrap_or_default();
+            dbg!(&blogs);
+        }
+
+        //2.查询每月的文章数量
     }
 }
