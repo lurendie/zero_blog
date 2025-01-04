@@ -11,21 +11,6 @@ pub struct SearchBlog {
     content: String,
 }
 impl SearchBlog {
-    pub fn get_id(&self) -> i64 {
-        self.id
-    }
-    pub fn set_id(&mut self, id: i64) {
-        self.id = id;
-    }
-    pub fn get_title(&self) -> String {
-        self.title.clone()
-    }
-    pub fn set_title(&mut self, title: String) {
-        self.title = title;
-    }
-    pub fn get_content(&self) -> String {
-        self.content.clone()
-    }
     pub fn set_content(&mut self, content: String) {
         self.content = content;
     }

@@ -15,9 +15,9 @@ use sea_orm::{
 use crate::constant::redis_key_constants;
 use crate::entity::{blog, category};
 use crate::enums::DataBaseError;
-use crate::models::category::Category;
-use crate::models::vo::categorie::Categorie;
-use crate::models::vo::serise::Series;
+use crate::model::category::Category;
+use crate::model::vo::categorie::Categorie;
+use crate::model::vo::serise::Series;
 use crate::service::RedisService;
 
 pub struct CategoryService;
@@ -119,7 +119,7 @@ impl CategoryService {
         db: &DatabaseConnection,
     ) -> Result<ValueMap, DataBaseError> {
         let page = category::Entity::find().paginate(db, page_size);
-        let models = page.fetch_page(page_num).await?;
+        let models = page.fetch_page(page_num-1).await?;
         let mut list :Vec<Categorie> = vec![];
         for model in models {
             list.push(model.into());

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::app_state::AppState;
-use crate::models::vo::blog_vo::BlogVO;
+use crate::model::vo::blog_vo::BlogVO;
 use crate::service::{BlogService, CategoryService, TagService};
 use crate::{
     middleware::AppClaims,
-    models::{vo::blog_visibility::BlogVisibility, vo::page_request::SearchRequest, Result},
+    model::{vo::blog_visibility::BlogVisibility, vo::page_request::SearchRequest, ResponseResult},
 };
 use actix_jwt_session::Authenticated;
 use actix_web::web::Json;
@@ -31,7 +31,8 @@ pub async fn blogs(
     let categories = CategoryService::find_categories(connect).await; // 调用CategoryService的get_categories方法，获取分类数据
     map.insert(to_value!("blogs"), to_value!(page)); // 将博客分页数据插入到map中
     map.insert(to_value!("categories"), to_value!(categories)); // 将分类数据插入到map中
-    Result::ok("请求成功".to_string(), Some(to_value!(map))).ok_json() // 返回一个包含map的JSON响应
+    ResponseResult::ok("请求成功".to_string(), Some(to_value!(map))).json()
+    // 返回一个包含map的JSON响应
 }
 
 /**
@@ -48,8 +49,8 @@ pub async fn visibility(
     let id = path.into_inner();
     query.set_id(id as i64);
     match BlogService::update_visibility(&query, app.get_mysql_pool()).await {
-        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(_) => ResponseResult::ok_no_data("更新成功".to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
 
@@ -61,8 +62,8 @@ pub async fn top(
     app: web::Data<AppState>,
 ) -> impl Responder {
     match BlogService::update_visibility(&query, app.get_mysql_pool()).await {
-        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(_) => ResponseResult::ok_no_data("更新成功".to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
 
@@ -74,8 +75,8 @@ pub async fn recommend(
     app: web::Data<AppState>,
 ) -> impl Responder {
     match BlogService::update_visibility(&query, app.get_mysql_pool()).await {
-        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(_) => ResponseResult::ok_no_data("更新成功".to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
 /**
@@ -90,7 +91,7 @@ pub async fn category_and_tag(app: web::Data<AppState>) -> impl Responder {
     let category_list = CategoryService::get_list(connect).await;
     map.insert("categories".to_string(), to_value!(category_list));
     map.insert("tags".to_string(), to_value!(tag_list));
-    Result::ok("请求成功!".to_string(), Some(to_value!(map))).ok_json()
+    ResponseResult::ok("请求成功!".to_string(), Some(to_value!(map))).json()
 }
 
 /**
@@ -108,12 +109,12 @@ pub async fn blog(
         .parse::<u16>()
         .unwrap_or_default();
     if id <= 0 {
-        return Result::error("参数错误".to_string()).ok_json();
+        return ResponseResult::error("参数错误".to_string()).json();
     }
     let blog = BlogService::find_by_id(id, app.get_mysql_pool()).await;
     match blog {
-        Ok(blog) => Result::ok("请求成功!".to_string(), Some(to_value!(blog))).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(blog) => ResponseResult::ok("请求成功!".to_string(), Some(to_value!(blog))).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
 
@@ -128,8 +129,8 @@ pub async fn update_blog(
     app: web::Data<AppState>,
 ) -> impl Responder {
     match BlogService::update_blog(query.into_inner(), app.get_mysql_pool()).await {
-        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(_) => ResponseResult::ok_no_data("更新成功".to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
 /**
@@ -143,8 +144,8 @@ pub async fn create_blog(
     app: web::Data<AppState>,
 ) -> impl Responder {
     match BlogService::update_blog(query.into_inner(), app.get_mysql_pool()).await {
-        Ok(_) => Result::ok_no_data("更新成功".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(_) => ResponseResult::ok_no_data("更新成功".to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
 
@@ -164,10 +165,10 @@ pub async fn delete_blog(
         None => 0,
     };
     if id <= 0 {
-        return Result::error("参数错误".to_string()).ok_json();
+        return ResponseResult::error("参数错误".to_string()).json();
     }
     match BlogService::delete_by_id(id, app.get_mysql_pool()).await {
-        Ok(_) => Result::ok_no_data("删除成功".to_string()).ok_json(),
-        Err(e) => Result::error(e.to_string()).ok_json(),
+        Ok(_) => ResponseResult::ok_no_data("删除成功".to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }

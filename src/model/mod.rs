@@ -25,4 +25,4 @@ pub mod vo;
 
 pub mod dto;
 
-pub use vo::result::Result;
+pub use vo::response_result::ResponseResult;

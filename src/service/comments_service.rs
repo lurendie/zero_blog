@@ -1,6 +1,6 @@
 use crate::entity::comment;
 use crate::enums::DataBaseError;
-use crate::models::vo::comment::Comment;
+use crate::model::vo::comment::Comment;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter};
@@ -19,8 +19,10 @@ impl CommentService {
         let mut map = ValueMap::new();
         let page = comment::Entity::find()
             .filter(comment::Column::BlogId.eq(blog_id))
+            .filter(comment::Column::IsPublished.eq(true))
+            .filter(comment::Column::ParentCommentId.eq(-1))
             .paginate(db, PAGE_SIZE);
-        let models = page.fetch_page(page_num).await?;
+        let models = page.fetch_page(page_num - 1).await?;
         let mut comments = vec![];
         for model in models.into_iter() {
             let id = model.id;
@@ -40,18 +42,16 @@ impl CommentService {
     ) -> Result<Vec<Comment>, DataBaseError> {
         let models = comment::Entity::find()
             .filter(comment::Column::ParentCommentId.eq(id))
+            .filter(comment::Column::IsPublished.eq(true))
             .all(db)
             .await?;
 
         let mut futures = Vec::new();
         let mut comments = vec![];
         for item in models.into_iter() {
-            let id = item.id;
             // 使用 Box::pin 来递归调用 get_comments，允许存在递归
-            if id > 0 {
-                let future = Box::pin(Self::find_comment_by_id(item.id, db));
-                futures.push(future);
-            }
+            let future = Box::pin(Self::find_comment_by_id(item.id, db));
+            futures.push(future);
             comments.push(Comment::from(item));
         }
         let mut reply_comments = vec![];
@@ -64,7 +64,7 @@ impl CommentService {
                             .one(db)
                             .await?;
                         if let Some(parent_comment) = parent_comment {
-                            item.nickname = parent_comment.nickname;
+                            item.parent_comment_name = Some(parent_comment.nickname);
                         }
                     }
                     None => {}
@@ -77,21 +77,26 @@ impl CommentService {
         Ok(reply_comments)
     }
 
-    pub(crate) async fn get_all_comments(blog_id: i64,db: &DatabaseConnection,) -> Result<u64,DataBaseError> {
-        let count =comment::Entity::find().filter(comment::Column::BlogId.eq(blog_id)).count(db).await?;
+    pub(crate) async fn get_all_count(
+        blog_id: i64,
+        db: &DatabaseConnection,
+    ) -> Result<u64, DataBaseError> {
+        let count = comment::Entity::find()
+            .filter(comment::Column::BlogId.eq(blog_id))
+            .count(db)
+            .await?;
         Ok(count)
     }
 
-    pub(crate) async fn get_close_comments(blog_id: i64,db: &DatabaseConnection,) -> Result<u64,DataBaseError> {
-        let count =comment::Entity::find().filter(comment::Column::BlogId.eq(blog_id).add(comment::Column::IsPublished.eq(false))).count(db).await?;
-        Ok(count)
-    }
-
-    /**
-     * 获取评论的总数
-     */
-    pub async fn get_comment_count(db: &DatabaseConnection) ->  Result<u64,DataBaseError> {
-        let count =comment::Entity::find().count(db).await?;
+    pub(crate) async fn get_close_count(
+        blog_id: i64,
+        db: &DatabaseConnection,
+    ) -> Result<u64, DataBaseError> {
+        let count = comment::Entity::find()
+            .filter(comment::Column::BlogId.eq(blog_id))
+            .filter(comment::Column::IsPublished.eq(false))
+            .count(db)
+            .await?;
         Ok(count)
     }
 }

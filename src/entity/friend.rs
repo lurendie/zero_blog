@@ -2,7 +2,7 @@
 
 use sea_orm::entity::prelude::*;
 
-use crate::models::friend::Friend;
+use crate::model::friend::Friend;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "friend")]

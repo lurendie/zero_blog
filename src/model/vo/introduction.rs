@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::models::vo::favorite::Favorite;
+use crate::model::vo::favorite::Favorite;
 //侧边资料卡
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct Introduction{

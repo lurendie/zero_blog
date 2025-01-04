@@ -1,14 +1,13 @@
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
-use sea_orm::{
-    ActiveModelTrait, ActiveValue, DatabaseConnection, EntityTrait, ModelTrait, PaginatorTrait,
+use sea_orm::{DatabaseConnection, EntityTrait, ModelTrait, PaginatorTrait,
 };
 
 use crate::constant::redis_key_constants;
 use crate::entity::{blog, tag};
 use crate::enums::DataBaseError;
-use crate::models::dto::tag_dto::TagVO;
-use crate::models::vo::serise::Series;
+use crate::model::dto::tag_dto::TagVO;
+use crate::model::vo::serise::Series;
 
 use super::RedisService;
 pub struct TagService;
@@ -80,19 +79,19 @@ impl TagService {
         map
     }
 
-    /**
-     * 添加标签
-     */
-    pub async fn add_tag(name: String, db: &DatabaseConnection) -> Result<(), DataBaseError> {
-        tag::ActiveModel {
-            tag_name: ActiveValue::set(name),
-            color: ActiveValue::set(Some("#000000".to_string())),
-            ..Default::default()
-        }
-        .insert(db)
-        .await?;
-        Ok(())
-    }
+    // /**
+    //  * 添加标签
+    //  */
+    // pub async fn add_tag(name: String, db: &DatabaseConnection) -> Result<(), DataBaseError> {
+    //     tag::ActiveModel {
+    //         tag_name: ActiveValue::set(name),
+    //         color: ActiveValue::set(Some("#000000".to_string())),
+    //         ..Default::default()
+    //     }
+    //     .insert(db)
+    //     .await?;
+    //     Ok(())
+    // }
 
     /**
      * 查询标签 by page
@@ -103,7 +102,7 @@ impl TagService {
         db: &DatabaseConnection,
     ) -> Result<ValueMap, DataBaseError> {
         let page = tag::Entity::find().paginate(db, page_size);
-        let models = page.fetch_page(page_num).await?;
+        let models = page.fetch_page(page_num-1).await?;
         let mut list: Vec<TagVO> = vec![];
         for model in models {
             list.push(model.into());

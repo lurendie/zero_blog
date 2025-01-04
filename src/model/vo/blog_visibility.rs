@@ -19,9 +19,9 @@ pub struct BlogVisibility {
 
 
 impl BlogVisibility {
-    pub fn new() -> Self {
-        Self::default()
-    }
+    // pub fn new() -> Self {
+    //     Self::default()
+    // }
     pub fn get_id(&self) -> Option<i64> {
         self.id
     }
@@ -29,30 +29,30 @@ impl BlogVisibility {
         self.id = Some(id);
         self
     }
-    pub fn set_appreciation(&mut self, appreciation: bool) -> &mut Self {
-        self.appreciation = Some(appreciation);
-        self
-    }
-    pub fn set_comment_enabled(&mut self, comment_enabled: bool) -> &mut Self {
-        self.comment_enabled = Some(comment_enabled);
-        self
-    }
-    pub fn set_password(&mut self, password: String) -> &mut Self {
-        self.password = Some(password);
-        self
-    }
-    pub fn set_published(&mut self, published: bool) -> &mut Self {
-        self.published = Some(published);
-        self
-    }
-    pub fn set_recommend(&mut self, recommend: bool) -> &mut Self {
-        self.recommend = Some(recommend);
-        self
-    }
-    pub fn set_top(&mut self, top: bool) -> &mut Self {
-        self.top = Some(top);
-        self
-    }
+    // pub fn set_appreciation(&mut self, appreciation: bool) -> &mut Self {
+    //     self.appreciation = Some(appreciation);
+    //     self
+    // }
+    // pub fn set_comment_enabled(&mut self, comment_enabled: bool) -> &mut Self {
+    //     self.comment_enabled = Some(comment_enabled);
+    //     self
+    // }
+    // pub fn set_password(&mut self, password: String) -> &mut Self {
+    //     self.password = Some(password);
+    //     self
+    // }
+    // pub fn set_published(&mut self, published: bool) -> &mut Self {
+    //     self.published = Some(published);
+    //     self
+    // }
+    // pub fn set_recommend(&mut self, recommend: bool) -> &mut Self {
+    //     self.recommend = Some(recommend);
+    //     self
+    // }
+    // pub fn set_top(&mut self, top: bool) -> &mut Self {
+    //     self.top = Some(top);
+    //     self
+    // }
     pub fn get_appreciation(&self) -> Option<bool> {
         self.appreciation
     }

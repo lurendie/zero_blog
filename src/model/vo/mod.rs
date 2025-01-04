@@ -9,7 +9,7 @@ pub mod favorite;
 pub(crate) mod friend_info;
 pub mod introduction;
 pub mod page_request;
-pub mod result;
+pub mod response_result;
 pub mod serise;
 pub mod blog_visibility;
 pub mod blog_vo;

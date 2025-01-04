@@ -8,9 +8,9 @@ pub struct Category {
 }
 
 impl Category {
-    pub fn new(id: i64, name: String) -> Self {
-        Self { id, name }
-    }
+    // pub fn new(id: i64, name: String) -> Self {
+    //     Self { id, name }
+    // }
 
     pub fn get_id(&self) -> i64 {
         self.id
@@ -19,13 +19,13 @@ impl Category {
         &self.name
     }
 
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
-    }
+    // pub fn set_name(&mut self, name: String) {
+    //     self.name = name;
+    // }
 
-    pub fn set_id(&mut self, id: i64) {
-        self.id = id;
-    }
+    // pub fn set_id(&mut self, id: i64) {
+    //     self.id = id;
+    // }
 }
 
 impl From<category::Model> for Category {

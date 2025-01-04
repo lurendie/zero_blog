@@ -3,7 +3,7 @@ use sea_orm::{DatabaseConnection, ModelTrait};
 use serde::{Deserialize, Serialize};
 
 use crate::entity::{category, tag};
-use crate::models::{category::Category, dto::tag_dto::TagVO};
+use crate::model::{category::Category, dto::tag_dto::TagVO};
 
 use crate::entity::blog::{self, Model as Blog};
 //博客简要信息

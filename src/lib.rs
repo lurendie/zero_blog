@@ -1,21 +1,21 @@
 //配置项
 pub mod config;
 //models
-pub mod models;
+ mod model;
 // 应用
 pub mod app_server;
 //常量
 mod constant;
 //路由控制
-pub mod controller;
+ mod controller;
 //枚举
 mod enums;
 //日志
 pub mod log4rs;
 //服务
-pub mod service;
+ mod service;
 //工具
-mod utils;
+mod util;
 //redis
 mod redis;
 //中间件
@@ -23,5 +23,3 @@ mod app_state;
 mod middleware;
 
 mod entity;
-
-pub use config::CONFIG;

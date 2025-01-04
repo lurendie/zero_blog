@@ -5,7 +5,7 @@
  * @LastEditTime: 2024-05-18 09:58:55
  */
 use crate::app_state::AppState;
-use crate::models::vo::result::Result;
+use crate::model::vo::response_result::ResponseResult;
 use crate::service::BlogService;
 use actix_web::{get, web, Responder};
 use rbs::to_value;
@@ -19,5 +19,5 @@ pub(crate) async fn archives(app: web::Data<AppState>) -> impl Responder {
     let count = BlogService::find_archives_count(connection).await;
     data.insert(to_value!("blogMap"), to_value!(blog_map));
     data.insert(to_value!("count"), to_value!(count.unwrap_or_default()));
-    Result::ok("请求成功".to_string(), Some(to_value!(data))).ok_json()
+    ResponseResult::ok("请求成功".to_string(), Some(to_value!(data))).json()
 }

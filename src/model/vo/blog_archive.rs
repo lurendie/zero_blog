@@ -7,7 +7,7 @@ pub(crate) struct BlogArchive {
     pub password: Option<String>,
     pub privacy: Option<bool>,
     pub title: String,
-    pub day: Option<i64>,
+    pub day: Option<String>,
 }
 
 impl BlogArchive {

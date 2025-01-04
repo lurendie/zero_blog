@@ -2,7 +2,7 @@ use crate::constant::redis_key_constants;
 use crate::constant::site_setting_constants;
 use crate::entity::site_setting;
 use crate::enums::DataBaseError;
-use crate::models::vo::{badge::Badge, copyright::Copyright, favorite::Favorite, introduction};
+use crate::model::vo::{badge::Badge, copyright::Copyright, favorite::Favorite, introduction};
 use crate::service::RedisService;
 use rbs::to_value;
 use rbs::Value;
@@ -49,7 +49,9 @@ impl SiteSettingService {
                                     .insert(name_en, Value::String(v.value.unwrap_or_default()));
                             }
                         }
-                        None => return Err(DataBaseError::Custom("name_en 是Null".to_string())),
+                        None => {
+                            return Err(DataBaseError::Custom("类型1的name_en 是Null".to_string()))
+                        }
                     };
                 }
                 //类型2
@@ -91,9 +93,11 @@ impl SiteSettingService {
                                 .collect();
                             introduction.roll_text = arr;
                         }
-                        _ => return Err(DataBaseError::Custom("name_en 是Null".to_string())),
+                        _ => (),
                     },
-                    None => return Err(DataBaseError::Custom("name_en 是Null".to_string())),
+                    None => {
+                        return Err(DataBaseError::Custom("类型2的 name_en 是Null".to_string()))
+                    }
                 },
                 //类型3
                 Some(3) => match v.name_en {
@@ -102,9 +106,9 @@ impl SiteSettingService {
                             serde_json::from_str(v.value.unwrap_or_default().as_str())?;
                         badges.push(badge);
                     }
-                    None => return Err(DataBaseError::Custom("name_en 是Null".to_string())),
+                    None => return Err(DataBaseError::Custom("类型3的name_en 是Null".to_string())),
                 },
-                _ => return Err(DataBaseError::Custom("name_en 是Null".to_string())),
+                _ => (),
             }
             //类型3
         }

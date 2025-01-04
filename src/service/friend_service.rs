@@ -1,8 +1,7 @@
-use crate::entity::prelude::SiteSetting;
 use crate::entity::site_setting;
 use crate::enums::DataBaseError;
-use crate::models::vo::friend_info::FriendInfo;
-use crate::utils::MarkdownParser;
+use crate::model::vo::friend_info::FriendInfo;
+use crate::util::MarkdownParser;
 use rbs::{to_value, value::map::ValueMap};
 use sea_orm::ColumnTrait;
 use sea_orm::DatabaseConnection;
@@ -17,7 +16,7 @@ impl FriendService {
     pub(crate) async fn get_friend(db: &DatabaseConnection) -> Result<ValueMap, DataBaseError> {
         let mut friend_map = ValueMap::new();
         let mut friend_info = ValueMap::new();
-        let site_settings = SiteSetting::find()
+        let site_settings = site_setting::Entity::find()
             .filter(site_setting::Column::NameEn.contains("friend"))
             .all(db)
             .await?;

@@ -6,14 +6,14 @@ use crate::entity::{
 };
 
 use crate::enums::{DataBaseError, TypeValue};
-use crate::models::dto::blog_dto::BlogDto;
-use crate::models::vo::{
+use crate::model::dto::blog_dto::BlogDto;
+use crate::model::vo::{
     blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo,
     blog_visibility::BlogVisibility, blog_vo::BlogVO, page_request::SearchRequest,
     search_blog::SearchBlog,
 };
 use crate::service::RedisService;
-use crate::utils::MarkdownParser;
+use crate::util::MarkdownParser;
 use chrono::{Datelike, NaiveDate};
 use rand::Rng;
 use rbs::to_value;
@@ -55,7 +55,7 @@ impl BlogService {
 
         let page = blog::Entity::find()
             .filter(blog::Column::IsPublished.eq(true))
-            .order_by_desc(blog::Column::Id)
+            .order_by_desc(blog::Column::CreateTime)
             .paginate(db, blog_info_constants::PAGE_SIZE);
         let list = match page.fetch_page(page_num - 1).await {
             Ok(list) => list,
@@ -109,7 +109,11 @@ impl BlogService {
         }
         //2.查询数据库
 
-        let blog_models = blog::Entity::find().all(db).await.unwrap_or_default();
+        let blog_models = blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .all(db)
+            .await
+            .unwrap_or_default();
         let mut blog_info_list = Vec::new();
         for item in blog_models {
             blog_info_list.push(BlogInfo::from(item));
@@ -165,7 +169,11 @@ impl BlogService {
             return arr;
         }
         //2.查询数据库
-        let blog_models = blog::Entity::find().all(db).await.unwrap_or_default();
+        let blog_models = blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
+            .all(db)
+            .await
+            .unwrap_or_default();
         let mut blog_info_list = Vec::new();
         for item in blog_models {
             blog_info_list.push(BlogInfo::from(item));
@@ -217,6 +225,8 @@ impl BlogService {
 
         let page = category_model
             .find_related(blog::Entity)
+            .filter(blog::Column::IsPublished.eq(true))
+            .order_by_desc(blog::Column::CreateTime)
             .paginate(db, blog_info_constants::PAGE_SIZE);
         let blog_models = page
             .fetch_page(page_num as u64 - 1)
@@ -270,6 +280,8 @@ impl BlogService {
         };
         let page = tag_model
             .find_related(blog::Entity)
+            .filter(blog::Column::IsPublished.eq(true))
+            .order_by_desc(blog::Column::CreateTime)
             .paginate(db, blog_info_constants::PAGE_SIZE);
         let blog_models = page
             .fetch_page(page_num as u64 - 1)
@@ -296,6 +308,7 @@ impl BlogService {
         let mut dates = ValueMap::new();
         //1.获取所有文章的日期
         blog::Entity::find()
+            .filter(blog::Column::IsPublished.eq(true))
             .order_by_desc(blog::Column::CreateTime)
             .all(db)
             .await
@@ -313,7 +326,7 @@ impl BlogService {
             let date_time = NaiveDate::from_str(value.as_str().unwrap_or_default()).unwrap();
             let sql = Statement::from_sql_and_values(
                 DbBackend::MySql,
-                r#"SELECT id,title,DAY(create_time) as `day`,password
+                r#"SELECT id,title,CONCAT(DAY(create_time),"日") as `day`,password
             FROM blog
             WHERE YEAR(create_time) = ?
               AND MONTH(create_time) = ?;"#,
@@ -381,12 +394,12 @@ impl BlogService {
         }
     }
 
-    /**
-     * 所有文章总数(包含隐藏) -后台
-     */
-    pub async fn find_blog_count(db: &DatabaseConnection) -> u64 {
-        blog::Entity::find().count(db).await.unwrap_or_default()
-    }
+    // /**
+    //  * 所有文章总数(包含隐藏) -后台
+    //  */
+    // pub async fn find_blog_count(db: &DatabaseConnection) -> u64 {
+    //     blog::Entity::find().count(db).await.unwrap_or_default()
+    // }
 
     /**
      * 获取所有文章，用于首页展示，每页10条数据，并返回总页数，用于分页展示。 -后台
@@ -669,7 +682,8 @@ impl BlogService {
             .case_insensitive(true)
             .build()?;
         let mut models = blog::Entity::find()
-            .filter(blog::Column::Content.like(content))
+            .filter(blog::Column::IsPublished.eq(true))
+            .filter(blog::Column::Content.contains(content))
             .all(db)
             .await?;
         let mut search_blogs = vec![];

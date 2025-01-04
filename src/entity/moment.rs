@@ -2,7 +2,7 @@
 
 use sea_orm::entity::prelude::*;
 
-use crate::models::moment::Moment;
+use crate::model::{dto::moment_dto::MomentDTO, moment::Moment};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "moment")]
@@ -25,6 +25,18 @@ impl From<Moment> for Model{
     fn from(moment: Moment) -> Self {
         Self {
             id: moment.id.unwrap() as i64,
+            content: moment.content,
+            create_time: moment.create_time,
+            likes: Some(moment.likes),
+            is_published: moment.is_published,
+        }
+    }
+}
+
+impl From<MomentDTO> for Model{
+    fn from(moment: MomentDTO) -> Self {
+        Self {
+            id: moment.id.unwrap_or_default(),
             content: moment.content,
             create_time: moment.create_time,
             likes: Some(moment.likes),

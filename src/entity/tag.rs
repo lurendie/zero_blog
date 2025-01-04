@@ -28,7 +28,7 @@ impl Related<super::blog::Entity> for Entity {
 }
 
 impl Model{
-    pub fn new(tag_name: String, color: Option<String>) -> Self {
+    pub fn _new(tag_name: String, color: Option<String>) -> Self {
         Self {
             id: 0,
             tag_name,

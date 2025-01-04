@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::enums::DataBaseError;
 use crate::redis;
-use crate::CONFIG;
+use crate::config::CONFIG;
 use deadpool_redis::redis::AsyncCommands;
 use rbs::Value;
 

@@ -2,7 +2,7 @@
 
 use chrono::Local;
 use sea_orm::entity::prelude::*;
-use crate::models::vo::blog_vo::BlogVO;
+use crate::model::vo::blog_vo::BlogVO;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Default)]
 #[sea_orm(table_name = "blog")]
 pub struct Model {

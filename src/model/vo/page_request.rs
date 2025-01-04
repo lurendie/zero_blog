@@ -49,9 +49,9 @@ impl SearchRequest {
     pub fn get_blog_id(&self) -> i64 {
         self.blog_id.unwrap_or_default()
     }
-    pub fn get_page(&self) -> u64 {
-        self.page.unwrap_or_default()
-    }
+    // pub fn get_page(&self) -> u64 {
+    //     self.page.unwrap_or_default()
+    // }
     pub fn get_password(&self) -> String {
         self.password.clone().unwrap_or_default()
     }
@@ -71,21 +71,21 @@ impl SearchRequest {
         self.page_size = page_size;
     }
 
-    pub fn set_blog_id(&mut self, blog_id: Option<i64>) {
-        self.blog_id = blog_id;
-    }
+    // pub fn set_blog_id(&mut self, blog_id: Option<i64>) {
+    //     self.blog_id = blog_id;
+    // }
 
-    pub fn set_page(&mut self, page: Option<u64>) {
-        self.page = page;
-    }
+    // pub fn set_page(&mut self, page: Option<u64>) {
+    //     self.page = page;
+    // }
 
-    pub fn set_password(&mut self, password: Option<String>) {
-        self.password = password;
-    }
+    // pub fn set_password(&mut self, password: Option<String>) {
+    //     self.password = password;
+    // }
 
-    pub fn set_category_id(&mut self, category_id: Option<i64>) {
-        self.category_id = Some(category_id.unwrap_or_default().to_string());
-    }
+    // pub fn set_category_id(&mut self, category_id: Option<i64>) {
+    //     self.category_id = Some(category_id.unwrap_or_default().to_string());
+    // }
 
     pub fn get_category_id(&self) -> Option<i64> {
         self.category_id.clone().unwrap_or_default().parse().ok()
