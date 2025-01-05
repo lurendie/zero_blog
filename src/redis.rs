@@ -3,13 +3,14 @@ use deadpool_redis::{Config, Pool, PoolError, Runtime};
 use std::sync::LazyLock;
 
 static REDIS_URL: LazyLock<String> = LazyLock::new(|| {
+    let redis_config = CONFIG.get_redis_config();
     format!(
         "redis://{}:{}@{}:{}/{}",
-        CONFIG.redis.username,
-        CONFIG.redis.password,
-        CONFIG.redis.host,
-        CONFIG.redis.port,
-        CONFIG.redis.db
+        redis_config.username,
+        redis_config.password,
+        redis_config.host,
+        redis_config.port,
+        redis_config.db
     )
 });
 

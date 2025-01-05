@@ -26,9 +26,11 @@ impl AppServer {
      * run 服务启动
      */
     pub async fn run() -> std::io::Result<()> {
+        let server_config = CONFIG.get_server_config();
         //创建JWT
-        let jwt_ttl = JwtTtl(Duration::days(CONFIG.server.token_expires));
-        let refresh_ttl = RefreshTtl(Duration::days(CONFIG.server.token_expires));
+        let jwt_ttl = JwtTtl(Duration::days(server_config.token_expires));
+        let refresh_ttl = RefreshTtl(Duration::days(server_config.token_expires));
+
         //Appstate
         let app_state = AppState::new(
             app_state::get_connection().await,
@@ -49,7 +51,7 @@ impl AppServer {
                 .configure(Self::admin_router)
                 .default_service(web::to(index_controller::default))
         })
-        .bind(format!("{}:{}", CONFIG.server.host, CONFIG.server.port))?
+        .bind(format!("{}:{}", server_config.host, server_config.port))?
         .run()
         .await
     }

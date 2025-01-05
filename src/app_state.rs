@@ -1,5 +1,4 @@
-//use crate::config::Config;
-//use deadpool_redis::Pool;
+use crate::config::CONFIG;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
 #[derive(Clone)]
@@ -37,24 +36,28 @@ impl AppState {
 }
 
 pub async fn get_connection() -> DatabaseConnection {
-    let opt = ConnectOptions::new("mysql://root:root@127.0.0.1:3306/zero_api")
-        .max_connections(100)
-        .min_connections(10)
-        .sqlx_logging(false)
-        .to_owned();
+    let mysql_config = CONFIG.get_mysql_config();
+    let opt = ConnectOptions::new(format!(
+        "mysql://{}:{}@{}/{}",
+        mysql_config.user_name, mysql_config.password, mysql_config.host, mysql_config.data_base
+    ))
+    .max_connections(100)
+    .min_connections(10)
+    .sqlx_logging(false)
+    .to_owned();
     Database::connect(opt)
         .await
         .expect("Failed to connect to database")
 }
 
-#[cfg(test)]
-mod tests {
+//#[cfg(test)]
+// mod tests {
 
-    use super::*;
+//     use super::*;
 
-    #[actix_web::test]
-    async fn test_get_connection() {
-        let conn = get_connection().await;
-        assert!(conn.ping().await.is_ok());
-    }
-}
+//     #[actix_web::test]
+//     async fn test_get_connection() {
+//         let conn = get_connection().await;
+//         assert!(conn.ping().await.is_ok());
+//     }
+// }

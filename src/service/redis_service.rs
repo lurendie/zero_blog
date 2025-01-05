@@ -156,7 +156,7 @@ impl RedisService {
     pub async fn set_expire(key: String) {
         //获取连接
         if let Ok(mut redis) = redis::get_connection().await {
-            let _ = redis.expire::<String, i64>(key, CONFIG.redis.ttl).await;
+            let _ = redis.expire::<String, i64>(key, CONFIG.get_redis_config().ttl).await;
         } else {
             log::error!("设置key: {} 的过期时间失败", key);
         }
