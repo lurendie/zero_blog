@@ -1,7 +1,6 @@
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
-use sea_orm::{DatabaseConnection, EntityTrait, ModelTrait, PaginatorTrait,
-};
+use sea_orm::{DatabaseConnection, EntityTrait, ModelTrait, PaginatorTrait};
 
 use crate::constant::redis_key_constants;
 use crate::entity::{blog, tag};
@@ -12,7 +11,7 @@ use crate::model::vo::serise::Series;
 use super::RedisService;
 pub struct TagService;
 impl TagService {
-    pub async fn get_tags(db: &DatabaseConnection) -> Vec<Value> {
+    pub async fn get_tags(db: &DatabaseConnection) -> Result<Vec<Value>, DataBaseError> {
         let mut result = vec![];
         //1.查询redis缓存
         let redis_cache =
@@ -28,7 +27,7 @@ impl TagService {
                 }
                 _ => vec![],
             };
-            return arr;
+            return Ok(arr);
         }
         //2.查询数据库
         tag::Entity::find()
@@ -45,8 +44,12 @@ impl TagService {
             redis_key_constants::TAG_CLOUD_LIST.to_string(),
             &to_value!(&result),
         )
-        .await;
-        result
+        .await?;
+        log::info!(
+            "redis KEY:{} 写入缓存数据成功",
+            redis_key_constants::TAG_CLOUD_LIST
+        );
+        Ok(result)
     }
 
     pub(crate) async fn get_tags_count(db: &DatabaseConnection) -> rbs::value::map::ValueMap {
@@ -102,7 +105,7 @@ impl TagService {
         db: &DatabaseConnection,
     ) -> Result<ValueMap, DataBaseError> {
         let page = tag::Entity::find().paginate(db, page_size);
-        let models = page.fetch_page(page_num-1).await?;
+        let models = page.fetch_page(page_num - 1).await?;
         let mut list: Vec<TagVO> = vec![];
         for model in models {
             list.push(model.into());

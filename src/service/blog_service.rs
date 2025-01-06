@@ -34,7 +34,7 @@ impl BlogService {
     pub(crate) async fn find_list_by_page(
         page_num: u64,
         db: &DatabaseConnection,
-    ) -> HashMap<String, Value> {
+    ) -> Result<HashMap<String, Value>,DataBaseError> {
         //1.查询redis缓存
         let redis_cache = RedisService::get_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
@@ -48,7 +48,7 @@ impl BlogService {
                 redis_key_constants::HOME_BLOG_INFO_LIST,
                 page_num
             );
-            return redis_cache;
+            return Ok(redis_cache);
         }
         //3.查询数据库
         let mut map: HashMap<String, Value> = HashMap::new();
@@ -83,14 +83,18 @@ impl BlogService {
                 page_num.to_string(),
                 &map,
             )
-            .await;
+            .await?;
         }
-        map
+        log::info!(
+            "redis KEY:{} 写入缓存数据成功",
+            redis_key_constants::HOME_BLOG_INFO_LIST
+        );
+        Ok(map)
     }
     /**
      * 获取随机文章
      */
-    pub async fn find_list_random(db: &DatabaseConnection) -> Vec<Value> {
+    pub async fn find_list_random(db: &DatabaseConnection) -> Result<Vec<Value>, DataBaseError> {
         //1.查询Redis 缓存数据
         let redis_cache =
             RedisService::get_value_vec(redis_key_constants::RANDOM_BLOG_LIST.to_string()).await;
@@ -105,7 +109,7 @@ impl BlogService {
                 }
                 _ => vec![],
             };
-            return arr;
+            return Ok(arr);
         }
         //2.查询数据库
 
@@ -144,14 +148,15 @@ impl BlogService {
             redis_key_constants::RANDOM_BLOG_LIST.to_string(),
             &to_value!(&result),
         )
-        .await;
-        return result;
+        .await?;
+    log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::RANDOM_BLOG_LIST);
+        return Ok(result);
     }
 
     /**
      * 获取最新文章
      */
-    pub async fn find_list_new(db: &DatabaseConnection) -> Vec<Value> {
+    pub async fn find_list_new(db: &DatabaseConnection) ->Result<Vec<Value>, DataBaseError>  {
         //1.查询Redis 缓存数据
         let redis_cache =
             RedisService::get_value_vec(redis_key_constants::NEW_BLOG_LIST.to_string()).await;
@@ -166,7 +171,7 @@ impl BlogService {
                 }
                 _ => vec![],
             };
-            return arr;
+            return Ok(arr);
         }
         //2.查询数据库
         let blog_models = blog::Entity::find()
@@ -200,8 +205,9 @@ impl BlogService {
             redis_key_constants::NEW_BLOG_LIST.to_string(),
             &to_value!(&result),
         )
-        .await;
-        result
+        .await?;
+    log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::NEW_BLOG_LIST);
+        Ok(result)
     }
 
     //根据分类名称查询博文
@@ -735,9 +741,9 @@ impl BlogService {
 #[cfg(test)]
 mod tests {
     use crate::{constant::blog_info_constants::RANDOM_BLOG_LIMIT_NUM, service::BlogService};
-    use chrono::{Local, NaiveDate};
+    use chrono::Local;
     use rand::Rng;
-    use sea_orm::{DbBackend, EntityTrait, FromQueryResult, Statement};
+    // use sea_orm::{DbBackend, EntityTrait, FromQueryResult, Statement};
     // use regex::Regex;
 
     // #[test]
@@ -848,50 +854,50 @@ mod tests {
         let date = Local::now().naive_local();
         println!("{:?}", date.format("%Y-%m").to_string());
     }
-    use super::*;
-    use crate::app_state::get_connection;
-    use crate::entity::blog;
-    use chrono::Datelike;
-    use rbs::value::map::ValueMap;
-    use std::ops::Index;
-    use std::str::FromStr;
-    #[actix_web::test]
-    async fn test_find_date_time() {
-        let db = get_connection().await;
-        //第一步查询所有的时间
-        let mut dates = ValueMap::new();
-        blog::Entity::find()
-            .order_by_desc(blog::Column::CreateTime)
-            .all(&db)
-            .await
-            .unwrap()
-            .into_iter()
-            .for_each(|model| {
-                let date = model.create_time.date();
-                let date_str = format!("{}年{}月", date.year(), date.month());
-                if let rbs::Value::Null = dates.index(date_str.as_str()) {
-                    dates.insert(date_str.into(), date.to_string().into());
-                }
-            });
+    // use super::*;
+    // use crate::app_state::get_connection;
+    // use crate::entity::blog;
+    // use chrono::Datelike;
+    // use rbs::value::map::ValueMap;
+    // use std::ops::Index;
+    // use std::str::FromStr;
+    // #[actix_web::test]
+    // async fn test_find_date_time() {
+    //     let db = get_connection().await;
+    //     //第一步查询所有的时间
+    //     let mut dates = ValueMap::new();
+    //     blog::Entity::find()
+    //         .order_by_desc(blog::Column::CreateTime)
+    //         .all(&db)
+    //         .await
+    //         .unwrap()
+    //         .into_iter()
+    //         .for_each(|model| {
+    //             let date = model.create_time.date();
+    //             let date_str = format!("{}年{}月", date.year(), date.month());
+    //             if let rbs::Value::Null = dates.index(date_str.as_str()) {
+    //                 dates.insert(date_str.into(), date.to_string().into());
+    //             }
+    //         });
 
-        for (key, value) in dates {
-            println!("{} : {}", key, value);
-            let date_time = NaiveDate::from_str(value.as_str().unwrap_or_default()).unwrap();
-            let sql = Statement::from_sql_and_values(
-                DbBackend::MySql,
-                r#"SELECT id,title,DAY(create_time) as `day`,password
-        FROM blog
-        WHERE YEAR(create_time) = ?
-          AND MONTH(create_time) = ?;"#,
-                [date_time.year().into(), date_time.month().into()],
-            );
-            let blogs = BlogArchive::find_by_statement(sql)
-                .all(&db)
-                .await
-                .unwrap_or_default();
-            dbg!(&blogs);
-        }
+    //     for (key, value) in dates {
+    //         println!("{} : {}", key, value);
+    //         let date_time = NaiveDate::from_str(value.as_str().unwrap_or_default()).unwrap();
+    //         let sql = Statement::from_sql_and_values(
+    //             DbBackend::MySql,
+    //             r#"SELECT id,title,DAY(create_time) as `day`,password
+    //     FROM blog
+    //     WHERE YEAR(create_time) = ?
+    //       AND MONTH(create_time) = ?;"#,
+    //             [date_time.year().into(), date_time.month().into()],
+    //         );
+    //         let blogs = BlogArchive::find_by_statement(sql)
+    //             .all(&db)
+    //             .await
+    //             .unwrap_or_default();
+    //         dbg!(&blogs);
+    //     }
 
-        //2.查询每月的文章数量
-    }
+    //     //2.查询每月的文章数量
+    // }
 }

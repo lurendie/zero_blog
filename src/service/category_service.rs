@@ -26,7 +26,7 @@ impl CategoryService {
     /**
      * 查询所有分类(首页)
      */
-    pub async fn get_list(db: &DatabaseConnection) -> Vec<Value> {
+    pub async fn get_list(db: &DatabaseConnection) -> Result<Vec<Value>, DataBaseError> {
         //1.查询Redis
         let result =
             RedisService::get_value_vec(redis_key_constants::CATEGORY_NAME_LIST.to_string()).await;
@@ -41,7 +41,7 @@ impl CategoryService {
                 }
                 _ => vec![],
             };
-            return arr;
+            return Ok(arr);
         }
         //2.查询数据库
         let mut result = vec![];
@@ -59,8 +59,9 @@ impl CategoryService {
             redis_key_constants::CATEGORY_NAME_LIST.to_string(),
             &to_value!(&result),
         )
-        .await;
-        result
+        .await?;
+    log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::CATEGORY_NAME_LIST);
+        Ok(result)
     }
 
     /**

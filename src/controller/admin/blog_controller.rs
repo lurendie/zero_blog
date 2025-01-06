@@ -87,8 +87,14 @@ pub async fn recommend(
 pub async fn category_and_tag(app: web::Data<AppState>) -> impl Responder {
     let mut map: HashMap<String, Value> = HashMap::new();
     let connect = app.get_mysql_pool();
-    let tag_list = TagService::get_tags(connect).await;
-    let category_list = CategoryService::get_list(connect).await;
+    let tag_list = match TagService::get_tags(connect).await{
+        Ok(tag_list) => tag_list,
+        Err(e) => return ResponseResult::error(e.to_string()).json(),
+    };
+    let category_list = match CategoryService::get_list(connect).await{
+        Ok(category_list) => category_list,
+        Err(e) => return ResponseResult::error(e.to_string()).json(),
+    };
     map.insert("categories".to_string(), to_value!(category_list));
     map.insert("tags".to_string(), to_value!(tag_list));
     ResponseResult::ok("请求成功!".to_string(), Some(to_value!(map))).json()

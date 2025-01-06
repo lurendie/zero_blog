@@ -26,10 +26,22 @@ pub async fn site(app: web::Data<AppState>) -> impl Responder {
         Ok(data) => data,
         Err(e) => return ResponseResult::error(e.to_string()).json(),
     };
-    let category_list = CategoryService::get_list(connect).await;
-    let random_list = BlogService::find_list_random(connect).await;
-    let new_list = BlogService::find_list_new(connect).await;
-    let tag_list = TagService::get_tags(connect).await;
+    let category_list =match  CategoryService::get_list(connect).await{
+        Ok(data) => data,
+        Err(e) => return ResponseResult::error(e.to_string()).json(),
+    };
+    let random_list = match BlogService::find_list_random(connect).await{
+        Ok(data) => data,
+        Err(e) => return ResponseResult::error(e.to_string()).json(),
+    };
+    let new_list = match BlogService::find_list_new(connect).await{
+        Ok(data) => data,
+        Err(e) => return ResponseResult::error(e.to_string()).json(),
+    };
+    let tag_list = match TagService::get_tags(connect).await{
+        Ok(data) => data,
+        Err(e) => return ResponseResult::error(e.to_string()).json(),
+    };
     map.insert("newBlogList".to_string(), to_value!(new_list));
     map.insert("categoryList".to_string(), to_value!(category_list));
     map.insert("tagList".to_string(), to_value!(tag_list));

@@ -117,7 +117,8 @@ impl SiteSettingService {
         map.insert("siteInfo".to_string(), to_value!(site_info));
         map.insert("badges".to_string(), to_value!(badges));
         //缓存数据
-        RedisService::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await;
+        RedisService::set_value_map(redis_key_constants::SITE_INFO_MAP.to_string(), &map).await?;
+        log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::SITE_INFO_MAP);
         Ok(map)
     }
 }

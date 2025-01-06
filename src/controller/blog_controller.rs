@@ -19,7 +19,12 @@ pub async fn blogs(mut params: Query<SearchRequest>, app: web::Data<AppState>) -
     };
     let db_conn = app.get_mysql_pool();
 
-    let page = BlogService::find_list_by_page(params.get_page_num() as u64, db_conn).await;
+    let page = match BlogService::find_list_by_page(params.get_page_num(), db_conn).await {
+        Ok(page) => page,
+        Err(e) => {
+            return ResponseResult::error(e.to_string()).json();
+        }
+    };
     let result: ResponseResult<HashMap<String, Value>> =
         ResponseResult::<HashMap<String, Value>>::ok(String::from("请求成功！"), Some(page));
     HttpResponse::Ok().json(result)
@@ -111,8 +116,11 @@ pub async fn check_blog_password(
         let blog_info = BlogService::find_id_detail(data.get_blog_id(), app.get_mysql_pool()).await;
         if let Some(blog_info) = blog_info {
             if blog_info.password.clone().unwrap_or_default() == data.get_password() {
-                return ResponseResult::ok("验证成功,密码正确!".to_string(), Some(to_value!(blog_info)))
-                    .json();
+                return ResponseResult::ok(
+                    "验证成功,密码正确!".to_string(),
+                    Some(to_value!(blog_info)),
+                )
+                .json();
             }
         }
     }
@@ -121,17 +129,20 @@ pub async fn check_blog_password(
 
 #[routes]
 #[get("/searchBlog")]
-pub async fn search_blog(query: Query<HashMap<String, String>>,app: web::Data<AppState>) -> impl Responder {
+pub async fn search_blog(
+    query: Query<HashMap<String, String>>,
+    app: web::Data<AppState>,
+) -> impl Responder {
     let blog_title = match query.get("query") {
         Some(title) => title.clone(),
         None => String::new(),
     };
     if blog_title.is_empty() {
-        return ResponseResult::error("参数有误!".to_string()).json()
+        return ResponseResult::error("参数有误!".to_string()).json();
     }
     //查找title内容的文章
-    match BlogService::search_content(blog_title,app.get_mysql_pool()).await {
+    match BlogService::search_content(blog_title, app.get_mysql_pool()).await {
         Ok(result) => ResponseResult::ok("请求成功".to_string(), Some(to_value!(result))).json(),
-        Err(e) =>ResponseResult::error(e.to_string()).json(),
+        Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }
