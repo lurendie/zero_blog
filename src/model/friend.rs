@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 //友链
-pub(crate) struct Friend {
+pub struct Friend {
     pub(crate) id: Option<i64>,
     pub(crate) nickname: String,
     pub(crate) description: String,

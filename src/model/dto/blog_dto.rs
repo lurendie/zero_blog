@@ -7,12 +7,12 @@ use crate::{
     model::category::Category,
 };
 
-use super::tag_dto::TagVO;
+use super::tag_dto::TagDTO;
 use crate::entity::blog;
 
 //Blog
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct BlogDto {
+pub struct BlogDTO {
     id: Option<i64>,
     title: String,
     #[serde(rename(serialize = "firstPicture"))]
@@ -45,12 +45,12 @@ pub struct BlogDto {
     //category_id: i64,
     //#[serde(skip_deserializing)] // 跳过该字段，不进行反序列化操作。
     category: Option<Category>,
-    tags: Option<Vec<TagVO>>,
+    tags: Option<Vec<TagDTO>>,
 }
 
-impl From<blog::Model> for BlogDto {
+impl From<blog::Model> for BlogDTO {
     fn from(model: blog::Model) -> Self {
-        BlogDto {
+        BlogDTO {
             id: Some(model.id),
             title: model.title,
             first_picture: model.first_picture,
@@ -69,13 +69,13 @@ impl From<blog::Model> for BlogDto {
             password: model.password,
             user_id: model.user_id,
             category: None,
-        //    category_id: model.category_id,
+            //    category_id: model.category_id,
             tags: None,
         }
     }
 }
 
-impl BlogDto {
+impl BlogDTO {
     // pub fn get_id(&self) -> i64 {
     //     self.id.unwrap_or(0)
     // }
@@ -232,7 +232,7 @@ impl BlogDto {
             .unwrap_or_default();
         let mut tags = vec![];
         for tag_model in tag_models {
-            tags.push(TagVO::from(tag_model))
+            tags.push(TagDTO::from(tag_model))
         }
         self.tags = Some(tags);
     }

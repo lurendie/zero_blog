@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::app_state::AppState;
-use crate::model::category::Category;
-use crate::model::vo::page_request::SearchRequest;
-use crate::model::vo::response_result::ResponseResult;
+use crate::model::Category;
+use crate::model::SearchRequest;
+use crate::model::ResponseResult;
 use crate::service::CategoryService;
 use crate::{middleware::AppClaims, service::BlogService};
 use actix_jwt_session::Authenticated;

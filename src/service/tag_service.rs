@@ -1,12 +1,16 @@
 use rbs::value::map::ValueMap;
 use rbs::{to_value, Value};
-use sea_orm::{DatabaseConnection, EntityTrait, ModelTrait, PaginatorTrait};
+use sea_orm::ActiveValue::NotSet;
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, ModelTrait,
+    PaginatorTrait, QueryFilter,
+};
 
 use crate::constant::redis_key_constants;
-use crate::entity::{blog, tag};
+use crate::entity::{blog, blog_tag, tag};
 use crate::enums::DataBaseError;
-use crate::model::dto::tag_dto::TagVO;
-use crate::model::vo::serise::Series;
+use crate::model::Serise;
+use crate::model::TagDTO;
 
 use super::RedisService;
 pub struct TagService;
@@ -36,7 +40,7 @@ impl TagService {
             .unwrap_or_default()
             .into_iter()
             .for_each(|model| {
-                result.push(to_value!(TagVO::from(model)));
+                result.push(to_value!(TagDTO::from(model)));
             });
 
         //保存到Redis
@@ -69,7 +73,7 @@ impl TagService {
                             0
                         }
                     };
-                    let series_item = Series::new(item.id, item.tag_name, count);
+                    let series_item = Serise::new(item.id, item.tag_name, count);
                     series.push(series_item);
                 }
             }
@@ -82,19 +86,22 @@ impl TagService {
         map
     }
 
-    // /**
-    //  * 添加标签
-    //  */
-    // pub async fn add_tag(name: String, db: &DatabaseConnection) -> Result<(), DataBaseError> {
-    //     tag::ActiveModel {
-    //         tag_name: ActiveValue::set(name),
-    //         color: ActiveValue::set(Some("#000000".to_string())),
-    //         ..Default::default()
-    //     }
-    //     .insert(db)
-    //     .await?;
-    //     Ok(())
-    // }
+    /**
+     * 添加标签
+     */
+    pub async fn insert_or_update(
+        tag_vo: TagDTO,
+        db: &DatabaseConnection,
+    ) -> Result<(), DataBaseError> {
+        let id = tag_vo.id;
+        let model: tag::Model = tag_vo.into();
+        let mut active = model.into_active_model();
+        if id.is_none() {
+            active.id = NotSet;
+        }
+        active.reset_all().save(db).await?;
+        Ok(())
+    }
 
     /**
      * 查询标签 by page
@@ -106,7 +113,7 @@ impl TagService {
     ) -> Result<ValueMap, DataBaseError> {
         let page = tag::Entity::find().paginate(db, page_size);
         let models = page.fetch_page(page_num - 1).await?;
-        let mut list: Vec<TagVO> = vec![];
+        let mut list: Vec<TagDTO> = vec![];
         for model in models {
             list.push(model.into());
         }
@@ -114,8 +121,22 @@ impl TagService {
         map.insert(to_value!("pageNum"), to_value!(page_num));
         map.insert(to_value!("pageSize"), to_value!(page_size));
         map.insert(to_value!("pages"), to_value!(page.num_pages().await?));
-        map.insert(to_value!("total"), to_value!(page.num_pages().await?));
+        map.insert(to_value!("total"), to_value!(page.num_items().await?));
         map.insert(to_value!("list"), to_value!(list));
         Ok(map)
+    }
+
+    pub async fn delete_by_id(id: i64, db: &DatabaseConnection) -> Result<(), DataBaseError> {
+        let count = blog_tag::Entity::find()
+            .filter(blog_tag::Column::TagId.eq(id))
+            .count(db)
+            .await?;
+        match count > 0 {
+            true => return Err(DataBaseError::Custom("标签下有文章，不能删除".to_string())),
+            false => {
+                tag::Entity::delete_by_id(id).exec(db).await?;
+                Ok(())
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::middleware::AppClaims;
-use crate::model::dto::moment_dto::MomentDTO;
-use crate::model::{vo::page_request::SearchRequest, ResponseResult};
+use crate::model::MomentDTO;
+use crate::model::{ResponseResult, SearchRequest};
 use crate::service::MomentService;
 use actix_jwt_session::Authenticated;
 use actix_web::{routes, web, Responder};
@@ -45,7 +45,9 @@ pub async fn moments(
     )
     .await
     {
-        Ok(value_map) => ResponseResult::ok("请求成功".to_string(), Some(to_value!(value_map))).json(), // 返回一个包含map的JSON响应;
+        Ok(value_map) => {
+            ResponseResult::ok("请求成功".to_string(), Some(to_value!(value_map))).json()
+        } // 返回一个包含map的JSON响应;
         Err(e) => ResponseResult::error(e.to_string()).json(),
     }
 }

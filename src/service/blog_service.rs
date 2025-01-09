@@ -6,11 +6,9 @@ use crate::entity::{
 };
 
 use crate::enums::{DataBaseError, TypeValue};
-use crate::model::dto::blog_dto::BlogDto;
-use crate::model::vo::{
-    blog_archive::BlogArchive, blog_detail::BlogDetail, blog_info::BlogInfo,
-    blog_visibility::BlogVisibility, blog_vo::BlogVO, page_request::SearchRequest,
-    search_blog::SearchBlog,
+use crate::model::BlogDTO;
+use crate::model::{
+    BlogArchive, BlogDetail, BlogInfo, BlogVO, BlogVisibility, SearchBlog, SearchRequest,
 };
 use crate::service::RedisService;
 use crate::util::MarkdownParser;
@@ -34,7 +32,7 @@ impl BlogService {
     pub(crate) async fn find_list_by_page(
         page_num: u64,
         db: &DatabaseConnection,
-    ) -> Result<HashMap<String, Value>,DataBaseError> {
+    ) -> Result<HashMap<String, Value>, DataBaseError> {
         //1.查询redis缓存
         let redis_cache = RedisService::get_hash_key(
             redis_key_constants::HOME_BLOG_INFO_LIST.to_string(),
@@ -149,14 +147,17 @@ impl BlogService {
             &to_value!(&result),
         )
         .await?;
-    log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::RANDOM_BLOG_LIST);
+        log::info!(
+            "redis KEY:{} 写入缓存数据成功",
+            redis_key_constants::RANDOM_BLOG_LIST
+        );
         return Ok(result);
     }
 
     /**
      * 获取最新文章
      */
-    pub async fn find_list_new(db: &DatabaseConnection) ->Result<Vec<Value>, DataBaseError>  {
+    pub async fn find_list_new(db: &DatabaseConnection) -> Result<Vec<Value>, DataBaseError> {
         //1.查询Redis 缓存数据
         let redis_cache =
             RedisService::get_value_vec(redis_key_constants::NEW_BLOG_LIST.to_string()).await;
@@ -206,7 +207,10 @@ impl BlogService {
             &to_value!(&result),
         )
         .await?;
-    log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::NEW_BLOG_LIST);
+        log::info!(
+            "redis KEY:{} 写入缓存数据成功",
+            redis_key_constants::NEW_BLOG_LIST
+        );
         Ok(result)
     }
 
@@ -431,7 +435,7 @@ impl BlogService {
             .unwrap_or_default();
         let mut blog_list = vec![];
         for model in page_list.into_iter() {
-            let mut blog_dto = BlogDto::from(model.clone());
+            let mut blog_dto = BlogDTO::from(model.clone());
             if blog_dto.get_password().is_none() {
                 blog_dto.set_password(Some(""));
             }
@@ -495,10 +499,10 @@ impl BlogService {
     /**
      * 获取id的文章 -后台
      */
-    pub(crate) async fn find_by_id(id: u16, db: &DatabaseConnection) -> Result<BlogDto, DbErr> {
+    pub(crate) async fn find_by_id(id: u16, db: &DatabaseConnection) -> Result<BlogDTO, DbErr> {
         match blog::Entity::find_by_id(id).one(db).await {
             Ok(Some(blog)) => {
-                let mut blog_dto = BlogDto::from(blog.clone());
+                let mut blog_dto = BlogDTO::from(blog.clone());
                 if blog_dto.get_password().unwrap_or_default() == "" {
                     blog_dto.set_password(None);
                 }
@@ -539,7 +543,7 @@ impl BlogService {
                                     //如果tag不存在，则插入tag，并获取id
                                     let tag_model = tag::ActiveModel {
                                         tag_name: ActiveValue::set(tag_name.to_string()),
-                                        color: ActiveValue::set(Some("#000000".to_string())),
+                                        color: ActiveValue::set(Some("red".to_string())),
                                         ..Default::default()
                                     };
                                     let result = tag::Entity::insert(tag_model).exec(conn).await?;

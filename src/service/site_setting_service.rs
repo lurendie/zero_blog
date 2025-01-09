@@ -2,7 +2,7 @@ use crate::constant::redis_key_constants;
 use crate::constant::site_setting_constants;
 use crate::entity::site_setting;
 use crate::enums::DataBaseError;
-use crate::model::vo::{badge::Badge, copyright::Copyright, favorite::Favorite, introduction};
+use crate::model::{Badge, Copyright, Favorite, Introduction};
 use crate::service::RedisService;
 use rbs::to_value;
 use rbs::Value;
@@ -30,7 +30,7 @@ impl SiteSettingService {
         //查询数据库
         let site_setting_list = site_setting::Entity::find().all(db).await?; // 假设这是一个 Vec 或其他可迭代集合
         let mut map: HashMap<String, Value> = HashMap::new();
-        let mut introduction = introduction::Introduction::new();
+        let mut introduction = Introduction::new();
         let mut site_info: HashMap<String, Value> = HashMap::new();
         let mut badges = vec![];
         let mut favorites: Vec<Favorite> = vec![];

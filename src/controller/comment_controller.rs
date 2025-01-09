@@ -5,7 +5,7 @@ use crate::app_state::AppState;
  * @LastEditors: lurendie
  * @LastEditTime: 2024-04-21 23:26:00
  */
-use crate::model::vo::{page_request::SearchRequest, response_result::ResponseResult};
+use crate::model::{SearchRequest, ResponseResult};
 use crate::service::CommentService;
 use actix_web::web::{self, Query};
 use actix_web::{get, Responder};

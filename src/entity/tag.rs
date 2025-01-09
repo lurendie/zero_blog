@@ -3,6 +3,8 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::model::TagDTO;
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize, Default)]
 #[sea_orm(table_name = "tag")]
 pub struct Model {
@@ -27,12 +29,22 @@ impl Related<super::blog::Entity> for Entity {
     }
 }
 
-impl Model{
+impl Model {
     pub fn _new(tag_name: String, color: Option<String>) -> Self {
         Self {
             id: 0,
             tag_name,
             color,
+        }
+    }
+}
+
+impl From<TagDTO> for Model {
+    fn from(tag_vo: TagDTO) -> Self {
+        Self {
+            id: tag_vo.id.unwrap_or(0),
+            tag_name: tag_vo.name,
+            color: Some(tag_vo.color),
         }
     }
 }

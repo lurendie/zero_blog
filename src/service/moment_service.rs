@@ -1,7 +1,7 @@
 use crate::entity::moment;
 use crate::enums::DataBaseError;
-use crate::model::dto::moment_dto::MomentDTO;
-use crate::model::moment::Moment;
+use crate::model::MomentDTO;
+use crate::model::Moment;
 use crate::util::MarkdownParser;
 use rbs::{to_value, value::map::ValueMap};
 use sea_orm::{

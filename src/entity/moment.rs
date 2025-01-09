@@ -2,7 +2,7 @@
 
 use sea_orm::entity::prelude::*;
 
-use crate::model::{dto::moment_dto::MomentDTO, moment::Moment};
+use crate::model::{Moment, MomentDTO};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "moment")]
@@ -21,7 +21,7 @@ pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
 
-impl From<Moment> for Model{
+impl From<Moment> for Model {
     fn from(moment: Moment) -> Self {
         Self {
             id: moment.id.unwrap() as i64,
@@ -33,7 +33,7 @@ impl From<Moment> for Model{
     }
 }
 
-impl From<MomentDTO> for Model{
+impl From<MomentDTO> for Model {
     fn from(moment: MomentDTO) -> Self {
         Self {
             id: moment.id.unwrap_or_default(),

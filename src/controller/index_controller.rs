@@ -6,7 +6,7 @@ use crate::app_state::AppState;
  * @LastEditTime: 2024-05-02 22:02:04
  * @FilePath: \zero_blog\src\controller\index_controller.rs
  */
-use crate::model::vo::response_result::ResponseResult;
+use crate::model::ResponseResult;
 
 use crate::service::{BlogService, CategoryService, SiteSettingService, TagService};
 use actix_web::{routes, web, HttpResponse, Responder};

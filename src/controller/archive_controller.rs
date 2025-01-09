@@ -5,7 +5,7 @@
  * @LastEditTime: 2024-05-18 09:58:55
  */
 use crate::app_state::AppState;
-use crate::model::vo::response_result::ResponseResult;
+use crate::model::ResponseResult;
 use crate::service::BlogService;
 use actix_web::{get, web, Responder};
 use rbs::to_value;

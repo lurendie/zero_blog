@@ -3,7 +3,7 @@ use sea_orm::{DatabaseConnection, ModelTrait};
 use serde::{Deserialize, Serialize};
 
 use crate::entity::{category, tag};
-use crate::model::{category::Category, dto::tag_dto::TagVO};
+use crate::model::{Category, TagDTO};
 
 use crate::entity::blog::{self, Model as Blog};
 //博客简要信息
@@ -21,7 +21,7 @@ pub struct BlogInfo {
     pub password: Option<String>,
     pub privacy: Option<bool>,
     pub is_top: bool,
-    pub tags: Option<Vec<TagVO>>,
+    pub tags: Option<Vec<TagDTO>>,
     pub category: Option<Category>,
     #[serde(rename(serialize = "firstPicture", deserialize = "first_picture"))]
     pub first_picture: Option<String>,
@@ -72,7 +72,7 @@ impl BlogInfo {
             .unwrap_or_default();
         let mut tags = vec![];
         for tag_model in tag_models {
-            tags.push(TagVO::from(tag_model))
+            tags.push(TagDTO::from(tag_model))
         }
         self.tags = Some(tags);
     }

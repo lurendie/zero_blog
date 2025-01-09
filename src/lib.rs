@@ -17,7 +17,7 @@ pub mod log4rs;
 //工具
 mod util;
 //redis
-mod redis;
+mod redis_client;
 //中间件
 mod app_state;
 mod middleware;

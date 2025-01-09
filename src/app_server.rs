@@ -5,6 +5,7 @@
  */
 use crate::app_state::{self, AppState};
 use crate::config::CONFIG;
+use crate::controller::admin::tag_controller;
 use crate::controller::{
     about_controller, admin, archive_controller, blog_controller, comment_controller,
     friend_controller, index_controller, moment_controller, user_controller,
@@ -105,7 +106,9 @@ impl AppServer {
                 .service(admin::category_controller::categories)
                 .service(admin::category_controller::update_category)
                 .service(admin::category_controller::delete_category)
-                .service(admin::tag_controller::get_all_tags),
+                .service(admin::tag_controller::get_all_tags)
+                .service(tag_controller::insert_or_update)
+                .service(tag_controller::delete_by_id),
         );
     }
 }

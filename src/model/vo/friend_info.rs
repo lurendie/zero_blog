@@ -2,7 +2,7 @@ use crate::entity::friend;
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 //友链
-pub(crate) struct FriendInfo {
+pub struct FriendInfo {
     nickname: String,
     description: String,
     website: String,

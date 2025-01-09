@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
-use crate::model::vo::page_request::SearchRequest;
-use crate::model::vo::response_result::ResponseResult;
+use crate::model::SearchRequest;
+use crate::model::ResponseResult;
 use crate::service;
 use actix_web::web::{self, Json, Query};
 use actix_web::{routes, HttpResponse, Responder};

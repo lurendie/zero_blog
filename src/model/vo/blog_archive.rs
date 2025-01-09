@@ -2,7 +2,7 @@ use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, FromQueryResult)]
-pub(crate) struct BlogArchive {
+pub struct BlogArchive {
     pub id: i64,
     pub password: Option<String>,
     pub privacy: Option<bool>,
@@ -11,7 +11,7 @@ pub(crate) struct BlogArchive {
 }
 
 impl BlogArchive {
-    pub(crate) fn _new() -> Self {
+    pub fn _new() -> Self {
         BlogArchive {
             id: 0,
             password: Some("".to_string()),

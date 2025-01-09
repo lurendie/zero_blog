@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use serde::Serialize;
 
-use crate::redis::REDIS_CL_IENT;
+use crate::redis_client::REDIS_CL_IENT;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]

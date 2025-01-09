@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::app_state::AppState;
-use crate::model::vo::blog_vo::BlogVO;
+use crate::model::BlogVO;
 use crate::service::{BlogService, CategoryService, TagService};
 use crate::{
     middleware::AppClaims,
-    model::{vo::blog_visibility::BlogVisibility, vo::page_request::SearchRequest, ResponseResult},
+    model::{BlogVisibility, ResponseResult, SearchRequest},
 };
 use actix_jwt_session::Authenticated;
 use actix_web::web::Json;
@@ -87,11 +87,11 @@ pub async fn recommend(
 pub async fn category_and_tag(app: web::Data<AppState>) -> impl Responder {
     let mut map: HashMap<String, Value> = HashMap::new();
     let connect = app.get_mysql_pool();
-    let tag_list = match TagService::get_tags(connect).await{
+    let tag_list = match TagService::get_tags(connect).await {
         Ok(tag_list) => tag_list,
         Err(e) => return ResponseResult::error(e.to_string()).json(),
     };
-    let category_list = match CategoryService::get_list(connect).await{
+    let category_list = match CategoryService::get_list(connect).await {
         Ok(category_list) => category_list,
         Err(e) => return ResponseResult::error(e.to_string()).json(),
     };

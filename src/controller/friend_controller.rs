@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::model::vo::response_result::ResponseResult;
+use crate::model::ResponseResult;
 use crate::service::FriendService;
 use actix_web::Responder;
 use actix_web::{get, web, HttpResponse};

@@ -1,12 +1,12 @@
 use crate::app_state::AppState;
-use crate::model::vo::page_request::SearchRequest;
+use crate::model::SearchRequest;
 use crate::service::MomentService;
 use actix_web::web::Path;
 use actix_web::{routes, web};
 use actix_web::{web::Query, Responder};
 use rbs::to_value;
 
-use crate::model::vo::response_result::ResponseResult;
+use crate::model::ResponseResult;
 
 //动态
 #[routes]

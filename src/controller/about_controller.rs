@@ -1,5 +1,5 @@
 use crate::service::AboutService;
-use crate::{app_state::AppState, model::vo::response_result::ResponseResult};
+use crate::{app_state::AppState, model::ResponseResult};
 use actix_web::{get, web, Responder};
 use rbs::to_value;
 

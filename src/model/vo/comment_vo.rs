@@ -3,7 +3,7 @@ use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 //评论
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct Comment {
+pub struct CommentVO {
     pub(crate) id: i64,
     pub(crate) nickname: String,
     pub(crate) content: String,
@@ -21,22 +21,22 @@ pub struct Comment {
     pub(crate) website: Option<String>,
     //pub(crate) qq: Option<String>,
     #[serde(rename(serialize = "replyComments"))]
-    pub(crate) reply_comments: Option<Vec<Comment>>,
+    pub(crate) reply_comments: Option<Vec<CommentVO>>,
 }
 
-impl From<comment::Model> for Comment {
+impl From<comment::Model> for CommentVO {
     fn from(model: comment::Model) -> Self {
         Self {
             id: model.id,
             nickname: model.nickname,
             content: model.content,
             avatar: model.avatar,
-            create_time:model.create_time.unwrap_or(Local::now().naive_local()),
+            create_time: model.create_time.unwrap_or(Local::now().naive_local()),
             is_admin_comment: model.is_admin_comment,
             parent_comment_id: Some(model.parent_comment_id),
             parent_comment_name: None,
             website: model.website,
-            reply_comments:None,
+            reply_comments: None,
         }
     }
 }

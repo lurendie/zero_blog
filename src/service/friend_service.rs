@@ -1,6 +1,6 @@
 use crate::entity::site_setting;
 use crate::enums::DataBaseError;
-use crate::model::vo::friend_info::FriendInfo;
+use crate::model::FriendInfo;
 use crate::util::MarkdownParser;
 use rbs::{to_value, value::map::ValueMap};
 use sea_orm::ColumnTrait;

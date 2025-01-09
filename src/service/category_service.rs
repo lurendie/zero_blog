@@ -15,9 +15,9 @@ use sea_orm::{
 use crate::constant::redis_key_constants;
 use crate::entity::{blog, category};
 use crate::enums::DataBaseError;
-use crate::model::category::Category;
-use crate::model::vo::categorie::Categorie;
-use crate::model::vo::serise::Series;
+use crate::model::Serise;
+use crate::model::Categorie;
+use crate::model::Category;
 use crate::service::RedisService;
 
 pub struct CategoryService;
@@ -60,7 +60,10 @@ impl CategoryService {
             &to_value!(&result),
         )
         .await?;
-    log::info!("redis KEY:{} 写入缓存数据成功", redis_key_constants::CATEGORY_NAME_LIST);
+        log::info!(
+            "redis KEY:{} 写入缓存数据成功",
+            redis_key_constants::CATEGORY_NAME_LIST
+        );
         Ok(result)
     }
 
@@ -83,7 +86,7 @@ impl CategoryService {
                             0
                         }
                     };
-                    let series_item = Series::new(item.id, item.category_name, count);
+                    let series_item = Serise::new(item.id, item.category_name, count);
                     series.push(series_item);
                 }
             }
@@ -120,8 +123,8 @@ impl CategoryService {
         db: &DatabaseConnection,
     ) -> Result<ValueMap, DataBaseError> {
         let page = category::Entity::find().paginate(db, page_size);
-        let models = page.fetch_page(page_num-1).await?;
-        let mut list :Vec<Categorie> = vec![];
+        let models = page.fetch_page(page_num - 1).await?;
+        let mut list: Vec<Categorie> = vec![];
         for model in models {
             list.push(model.into());
         }

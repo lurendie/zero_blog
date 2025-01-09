@@ -1,6 +1,6 @@
 use crate::entity::comment;
 use crate::enums::DataBaseError;
-use crate::model::vo::comment::Comment;
+use crate::model::CommentVO;
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter};
@@ -26,7 +26,7 @@ impl CommentService {
         let mut comments = vec![];
         for model in models.into_iter() {
             let id = model.id;
-            let mut comment = Comment::from(model);
+            let mut comment = CommentVO::from(model);
             comment.reply_comments = Some(Self::find_comment_by_id(id, db).await?);
             comments.push(comment);
         }
@@ -39,7 +39,7 @@ impl CommentService {
     pub(crate) async fn find_comment_by_id(
         id: i64,
         db: &DatabaseConnection,
-    ) -> Result<Vec<Comment>, DataBaseError> {
+    ) -> Result<Vec<CommentVO>, DataBaseError> {
         let models = comment::Entity::find()
             .filter(comment::Column::ParentCommentId.eq(id))
             .filter(comment::Column::IsPublished.eq(true))
@@ -52,7 +52,7 @@ impl CommentService {
             // 使用 Box::pin 来递归调用 get_comments，允许存在递归
             let future = Box::pin(Self::find_comment_by_id(item.id, db));
             futures.push(future);
-            comments.push(Comment::from(item));
+            comments.push(CommentVO::from(item));
         }
         let mut reply_comments = vec![];
         // 处理子评论
