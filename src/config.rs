@@ -4,8 +4,10 @@
  * @LastEditors: lurendie
  * @LastEditTime: 2024-05-17 12:18:04
  */
+use crate::enums::DataBaseError;
 use serde::{Deserialize, Serialize};
-use std::{fs, sync::LazyLock};
+use std::ffi::OsString;
+use std::{env, fs, panic, sync::LazyLock};
 //配置文件结构体
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -47,9 +49,32 @@ pub struct ServerConfig {
     pub(crate) token_expires: i64,    //token 过期时间
 }
 pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
-    let yaml_str = fs::read_to_string("./config/config.yaml").expect("Failed to read config.yaml");
-    serde_yaml::from_str::<Config>(&yaml_str).expect("Failed to parse config.yaml")
+    let envs: Vec<OsString> = env::args_os().collect();
+    let yaml_path = envs.get(1);
+    let load_path = match yaml_path {
+        Some(yaml_path) => yaml_path.clone(),
+        None => OsString::from("./config/config.yaml"),
+    };
+    match build_config(load_path) {
+        Ok(config) => return config,
+        Err(e) => {
+            panic!("{e}")
+        }
+    }
 });
+
+fn build_config(path: OsString) -> Result<Config, DataBaseError> {
+    let yaml_str = match fs::read_to_string(path.clone()) {
+        Ok(str) => str,
+        Err(_) => {
+            return Err(DataBaseError::Custom(format!(
+                "无法从路径:{:?} 中加载配置，请检查！",
+                path
+            )));
+        }
+    };
+    Ok(serde_yaml::from_str::<Config>(&yaml_str)?)
+}
 
 impl Config {
     pub fn get_mysql_config(&self) -> MysqlConfig {

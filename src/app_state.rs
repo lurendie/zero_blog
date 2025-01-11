@@ -1,26 +1,30 @@
 use crate::config::CONFIG;
+//use deadpool_redis::Pool;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) mysql_connection: DatabaseConnection,
-    // pub(crate) redis_connection: Pool,
-
+   // pub(crate) redis_connection: Pool,
     // pub(crate) config: Config,
 }
 
 impl AppState {
     pub fn new(
         mysql_connection: DatabaseConnection,
-        // redis_connection: Pool,
+        //redis_connection: Pool,
         // config: Config,
     ) -> Self {
         Self {
             mysql_connection,
-            // redis_connection,
+            //  redis_connection,
             // config,
         }
     }
+
+    // pub fn get_redis_pool(&self) -> &Pool {
+    //     &self.redis_connection
+    // }
 
     pub fn get_mysql_pool(&self) -> &DatabaseConnection {
         &self.mysql_connection

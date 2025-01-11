@@ -50,7 +50,7 @@ pub async fn _timeout_get_connection() -> Result<deadpool_redis::Connection, Poo
     }
 }
 
-pub async fn _get_redis_pool() -> Pool {
+pub async fn get_redis_pool() -> Pool {
     REDIS_CL_IENT.clone()
 }
 

@@ -4,16 +4,19 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum DataBaseError {
-    #[error("redis 异常原因是：{0}")]
+    #[error("redis 异常原因：{0}")]
     RedisError(#[from] deadpool_redis::redis::RedisError),
 
-    #[error("MySQL 异常原因是：{0}")]
+    #[error("MySQL 异常原因：{0}")]
     MySQLError(#[from] DbErr),
 
     #[error("serde_json 异常原因是：{0}")]
     SerdeJsonError(#[from] serde_json::Error),
 
-    #[error("Redis连接池  异常原因是：{0}")]
+    #[error("serde_yaml 异常原因是：{0}")]
+    SerdeYamlError(#[from] serde_yaml::Error),
+
+    #[error("Redis连接池异常原因：{0}")]
     PoolError(#[from] PoolError),
 
     #[error("MySQL事物异常原因 : {0}")]

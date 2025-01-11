@@ -10,8 +10,9 @@ use crate::controller::{
     about_controller, admin, archive_controller, blog_controller, comment_controller,
     friend_controller, index_controller, moment_controller, user_controller,
 };
-use crate::middleware::{AppClaims, VisiLog, JWT};
-use actix_jwt_session::{Duration, JwtTtl, RefreshTtl};
+use crate::middleware::{AppClaims, VisiLog};
+use crate::redis_client;
+use actix_jwt_session::{Duration, Extractors, JwtTtl, RefreshTtl, UseJwt, JWT_HEADER_NAME};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
@@ -35,16 +36,21 @@ impl AppServer {
         //Appstate
         let app_state = AppState::new(
             app_state::get_connection().await,
-            // redis::get_redis_pool().await,
+            //,
             // CONFIG.clone(),
         );
-
+        let redis_pool = redis_client::get_redis_pool().await;
+        let app_data = Data::new(app_state.clone());
         HttpServer::new(move || {
             //创建App
             App::new()
                 .app_data(Data::new(jwt_ttl))
                 .app_data(Data::new(refresh_ttl))
-                .app_data(Data::new(app_state.clone()))
+                .app_data(app_data.clone())
+                .use_jwt::<AppClaims>(
+                    Extractors::default().with_jwt_header(JWT_HEADER_NAME),
+                    Some(redis_pool.clone()),
+                )
                 .wrap(VisiLog::default())
                 .wrap(Logger::default()) //允许跨域请求
                 .configure(Self::view_router)
@@ -81,11 +87,8 @@ impl AppServer {
      * 后台路由
      */
     fn admin_router(cfg: &mut web::ServiceConfig) {
-        let (storage, factory) = JWT::create::<AppClaims>();
         cfg.service(
             web::scope("/admin")
-                .app_data(Data::new(storage.clone()))
-                .wrap(factory.clone())
                 .service(user_controller::login)
                 .service(admin::dashboard_controller::dashboard) //.default_service(web::to(adminIndexController::default)),
                 .service(admin::blog_controller::blogs)
