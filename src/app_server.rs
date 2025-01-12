@@ -13,7 +13,7 @@ use crate::controller::{
 use crate::middleware::{AppClaims, VisiLog};
 use crate::redis_client;
 use actix_jwt_session::{Duration, Extractors, JwtTtl, RefreshTtl, UseJwt, JWT_HEADER_NAME};
-use actix_web::middleware::Logger;
+//use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 
@@ -52,7 +52,7 @@ impl AppServer {
                     Some(redis_pool.clone()),
                 )
                 .wrap(VisiLog::default())
-                .wrap(Logger::default()) //允许跨域请求
+                //.wrap(Logger::default())
                 .configure(Self::view_router)
                 //admin
                 .configure(Self::admin_router)

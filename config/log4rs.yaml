@@ -4,17 +4,17 @@ appenders:
   stdout:
     kind: console
     encoder:
-      pattern: "[{d(%Y-%m-%dT%H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"
+      pattern: "[{d(%Y-%m-%d %H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"
 
   debug:
     kind: rolling_file
     path: "logs/debug.log"
     encoder:
-      pattern: "[{d(%Y-%m-%dT%H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"  
+      pattern: "[{d(%Y-%m-%d %H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"  
     policy:
       trigger:
-        kind: time
-        interval: 1 day
+        kind: size
+        limit: 10MB
       roller:
         kind: fixed_window
         pattern: "logs/debug.{}.log"
@@ -25,11 +25,11 @@ appenders:
     kind: rolling_file
     path: "logs/info.log"
     encoder:
-      pattern: "[{d(%Y-%m-%dT%H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"
+      pattern: "[{d(%Y-%m-%d %H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"
     policy:
       trigger:
-        kind: time
-        interval: 1 day
+        kind: size
+        limit: 10MB
       roller:
         kind: fixed_window
         pattern: "logs/info.{}.log"
@@ -43,23 +43,17 @@ root:
     - stdout
  #日志附着器
 loggers:
-  rbatis::plugin::intercept_log: #rbatis日志
-    level: DEBUG
-    appenders:
-      - debug
-    additive: false 
-
   zero_blog::service:
     level: INFO
     appenders:
       - info
       - stdout
-    additive: false  
+    additive: true  
 
   actix_web::middleware:
     level: INFO
     appenders:
       - info
       - stdout
-    additive: false  
+    additive: true  
   

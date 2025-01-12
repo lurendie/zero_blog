@@ -5,15 +5,18 @@
  * @LastEditTime: 2024-05-17 12:18:04
  */
 use crate::enums::DataBaseError;
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::{env, fs, panic, sync::LazyLock};
+
 //配置文件结构体
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Config {
     server: ServerConfig,
     mysql: MysqlConfig, //Mysql链接
     redis: ReidsConfig, //Redis
+    log: Option<LogConfig>,
 }
 /**
  * Redis 连接信息结构体
@@ -52,28 +55,55 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
     let envs: Vec<OsString> = env::args_os().collect();
     let yaml_path = envs.get(1);
     let load_path = match yaml_path {
-        Some(yaml_path) => yaml_path.clone(),
+        Some(yaml_path) => {
+            let mut new = yaml_path.clone();
+            new.push("/config.yaml");
+            new
+        }
         None => OsString::from("./config/config.yaml"),
     };
-    match build_config(load_path) {
-        Ok(config) => return config,
+    match Config::build_config(load_path) {
+        Ok(mut config) => {
+            config.log = Some(LogConfig::new().init());
+            return config;
+        }
         Err(e) => {
             panic!("{e}")
         }
     }
 });
 
-fn build_config(path: OsString) -> Result<Config, DataBaseError> {
-    let yaml_str = match fs::read_to_string(path.clone()) {
-        Ok(str) => str,
-        Err(_) => {
-            return Err(DataBaseError::Custom(format!(
-                "无法从路径:{:?} 中加载配置，请检查！",
-                path
-            )));
-        }
-    };
-    Ok(serde_yaml::from_str::<Config>(&yaml_str)?)
+#[derive(Default, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct LogConfig;
+impl LogConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn init(self) -> Self {
+        let envs: Vec<OsString> = env::args_os().collect();
+        let yaml_path = envs.get(1);
+        match yaml_path {
+            Some(yaml_path) => {
+                let mut new = yaml_path.clone();
+                new.push("/log4rs.yaml");
+                let _ = log4rs::init_file(new, Default::default()).unwrap();
+            }
+            None => {
+                let _ = log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
+            }
+        };
+        //let _ = log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
+        log::info!("日志初始化完成, 时间为:[{}]...", Self::get_date_time());
+        //修改日志等级ERROR 非ERROR日志不记录
+        //log::set_max_level(log::LevelFilter::Error.to_level().unwrap().to_level_filter());
+        self
+    }
+    pub const FMT_Y_M_D_H_M_S: &str = "%Y-%m-%d %H:%M:%S";
+
+    pub fn get_date_time() -> String {
+        let date_time = Local::now();
+        date_time.format(Self::FMT_Y_M_D_H_M_S).to_string()
+    }
 }
 
 impl Config {
@@ -87,6 +117,19 @@ impl Config {
 
     pub fn get_server_config(&self) -> ServerConfig {
         self.server.clone()
+    }
+
+    fn build_config(path: OsString) -> Result<Config, DataBaseError> {
+        let yaml_str = match fs::read_to_string(path.clone()) {
+            Ok(str) => str,
+            Err(_) => {
+                return Err(DataBaseError::Custom(format!(
+                    "无法从路径:{:?} 中加载配置，请检查！",
+                    path
+                )));
+            }
+        };
+        Ok(serde_yaml::from_str::<Config>(&yaml_str)?)
     }
 }
 
