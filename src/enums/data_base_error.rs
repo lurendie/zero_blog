@@ -25,7 +25,7 @@ pub enum DataBaseError {
     #[error("正则表达式异常原因 : {0}")]
     RegexError(#[from] regex::Error),
 
-    #[error("custom error: {0}")]
+    #[error("异常原因：{0}")]
     Custom(String),
 }
 #[cfg(test)]

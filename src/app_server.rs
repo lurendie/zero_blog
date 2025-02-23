@@ -111,7 +111,8 @@ impl AppServer {
                 .service(admin::category_controller::delete_category)
                 .service(admin::tag_controller::get_all_tags)
                 .service(tag_controller::insert_or_update)
-                .service(tag_controller::delete_by_id),
+                .service(tag_controller::delete_by_id)
+                .service(admin::comment_controller::find_comments),
         );
     }
 }

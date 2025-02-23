@@ -7,8 +7,7 @@
 use crate::enums::DataBaseError;
 use chrono::Local;
 use serde::{Deserialize, Serialize};
-use std::ffi::OsString;
-use std::{env, fs, panic, sync::LazyLock};
+use std::{fs, panic, sync::LazyLock};
 
 //配置文件结构体
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -52,17 +51,16 @@ pub struct ServerConfig {
     pub(crate) token_expires: i64,    //token 过期时间
 }
 pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
-    let envs: Vec<OsString> = env::args_os().collect();
-    let yaml_path = envs.get(1);
-    let load_path = match yaml_path {
-        Some(yaml_path) => {
-            let mut new = yaml_path.clone();
-            new.push("/config.yaml");
-            new
-        }
-        None => OsString::from("./config/config.yaml"),
-    };
-    match Config::build_config(load_path) {
+    // let envs = env::var_os("zero_config");
+    // let path = match envs {
+    //     Some(yaml_path) => {
+    //         let mut new = yaml_path.clone();
+    //         new.push("/config.yaml");
+    //         new
+    //     }
+    //     None => OsString::from("./config/config.yaml"),
+    // };
+    match Config::build_config("./config/config.yaml".to_string()) {
         Ok(mut config) => {
             config.log = Some(LogConfig::new().init());
             return config;
@@ -80,18 +78,18 @@ impl LogConfig {
         Self::default()
     }
     pub fn init(self) -> Self {
-        let envs: Vec<OsString> = env::args_os().collect();
-        let yaml_path = envs.get(1);
-        match yaml_path {
-            Some(yaml_path) => {
-                let mut new = yaml_path.clone();
-                new.push("/log4rs.yaml");
-                let _ = log4rs::init_file(new, Default::default()).unwrap();
-            }
-            None => {
-                let _ = log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
-            }
-        };
+        // let envs = env::var_os("zero_config");
+        // match envs {
+        //     Some(yaml_path) => {
+        //         let mut new = yaml_path.clone();
+        //         new.push("/log4rs.yaml");
+        //         let _ = log4rs::init_file(new, Default::default()).unwrap();
+        //     }
+        //     None => {
+        //         let _ = log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
+        //     }
+        // };
+        let _ = log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
         //let _ = log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
         log::info!("日志初始化完成, 时间为:[{}]...", Self::get_date_time());
         //修改日志等级ERROR 非ERROR日志不记录
@@ -119,7 +117,7 @@ impl Config {
         self.server.clone()
     }
 
-    fn build_config(path: OsString) -> Result<Config, DataBaseError> {
+    fn build_config(path: String) -> Result<Config, DataBaseError> {
         let yaml_str = match fs::read_to_string(path.clone()) {
             Ok(str) => str,
             Err(_) => {

@@ -5,7 +5,7 @@ use crate::app_state::AppState;
  * @LastEditors: lurendie
  * @LastEditTime: 2024-04-21 23:26:00
  */
-use crate::model::{SearchRequest, ResponseResult};
+use crate::model::{ResponseResult, SearchRequest};
 use crate::service::CommentService;
 use actix_web::web::{self, Query};
 use actix_web::{get, Responder};
@@ -26,7 +26,7 @@ pub(crate) async fn get_comments(
         None => return ResponseResult::error("获取数据失败!".to_string()).json(),
     };
     let connect = app.get_mysql_pool();
-    let list = match CommentService::find_comments_page(
+    let list = match CommentService::find_by_id_comments(
         page_request.get_page_num(),
         page_request.get_blog_id(),
         connect,

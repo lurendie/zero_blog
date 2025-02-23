@@ -1,6 +1,6 @@
 use crate::entity::comment;
 use crate::enums::DataBaseError;
-use crate::model::CommentVO;
+use crate::model::{Comment, CommentVO};
 use rbs::to_value;
 use rbs::value::map::ValueMap;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter};
@@ -11,7 +11,7 @@ pub struct CommentService;
 
 impl CommentService {
     //分页评论
-    pub(crate) async fn find_comments_page(
+    pub(crate) async fn find_by_id_comments(
         page_num: u64,
         blog_id: i64,
         db: &DatabaseConnection,
@@ -32,6 +32,39 @@ impl CommentService {
         }
         map.insert("list".into(), to_value!(comments));
         map.insert("totalPage".into(), rbs::Value::U64(page.num_pages().await?));
+
+        Ok(map)
+    }
+
+    //分页评论
+    pub(crate) async fn find_comments(
+        page_num: u64,
+        db: &DatabaseConnection,
+    ) -> Result<ValueMap, DataBaseError> {
+        let mut map = ValueMap::new();
+        let page = comment::Entity::find().paginate(db, PAGE_SIZE);
+        let models = page.fetch_page(page_num - 1).await?;
+        let mut comments = vec![];
+        for model in models.into_iter() {
+            // let id = model.id;
+            let comment = Comment::from(model);
+            //comment.reply_comments = Some(Self::find_comment_by_id(id, db).await?);
+            comments.push(comment);
+        }
+        map.insert(
+            to_value!("pageNum"),
+            to_value!(page.num_pages().await.unwrap_or_default()),
+        );
+        map.insert(to_value!("pageSize"), to_value!(PAGE_SIZE));
+        map.insert(
+            to_value!("pages"),
+            to_value!(page.num_pages().await.unwrap_or_default()),
+        );
+        map.insert(
+            to_value!("total"),
+            to_value!(page.num_items().await.unwrap_or_default()),
+        );
+        map.insert("list".into(), to_value!(comments));
 
         Ok(map)
     }

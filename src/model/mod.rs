@@ -26,7 +26,7 @@ mod vo;
 //pub use about::About;
 pub use category::Category;
 //pub use city_visitor::CityVisitor;
-//pub use comment::Comment;
+pub use comment::Comment;
 //pub use exception_log::ExceptionLog;
 //pub use login_log::LoginLog;
 pub use moment::Moment;

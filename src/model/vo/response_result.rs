@@ -12,14 +12,14 @@ pub struct ResponseResult<T> {
     pub data: Option<T>,
 }
 
-impl<T> ResponseResult<T> {
+impl<T: Serialize> ResponseResult<T> {
     pub fn new(code: u16, msg: String, data: Option<T>) -> ResponseResult<T> {
-        ResponseResult { code, msg, data }
+        Self { code, msg, data }
     }
 
     //无异常返回
     pub fn ok(msg: String, data: Option<T>) -> ResponseResult<T> {
-        ResponseResult {
+        Self {
             code: 200,
             msg,
             data,
@@ -29,7 +29,7 @@ impl<T> ResponseResult<T> {
     //无异常返回数据
     pub fn ok_no_data(msg: String) -> ResponseResult<T> {
         // 200 OK
-        ResponseResult {
+        Self {
             code: 200,
             msg,
             data: None,
@@ -38,7 +38,7 @@ impl<T> ResponseResult<T> {
 
     pub fn error(msg: String) -> ResponseResult<T> {
         // 500 Internal Server Error
-        ResponseResult {
+        Self {
             code: 500,
             msg,
             data: None,
